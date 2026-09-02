@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-900: #0a0c10;
+  --color-ink-800: #101319;
+  --color-ink-700: #161a22;
+  --color-ink-600: #1e232d;
+  --color-line: #262c38;
+  --color-mute: #8992a3;
+  --color-bright: #e8ebf0;
+  --color-good: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #fb7185;
+  --color-accent: #60a5fa;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ink-900);
+  color: var(--color-bright);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Figures are read in columns, so they get tabular digits everywhere. */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ink-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-600);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2c3341;
+}

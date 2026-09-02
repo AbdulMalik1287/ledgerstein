@@ -229,13 +229,22 @@ def _grade_exceptions(result: ReconResult, truth: dict) -> tuple[int, int]:
         str(leg): set(truth.get(key, {}).keys())
         for leg, key in LEG_TRUTH_KEYS.items()
     }
-    # Leg 4 keys on the bank row, and leg 1 consumes bank rows too, so a
-    # duplicate credit flagged on leg 1 must not be judged against leg 4.
+    # Some exceptions are advisory rather than terminal: a crossed reference is
+    # raised so a human knows the customer is quoting somebody else's invoice,
+    # while the payment itself still gets matched by another rule. A row that
+    # ended up matched was not given up on, so it is not a miss -- counting it
+    # as one understates the engine, which is the wrong direction but still
+    # wrong.
+    matched_by_leg: dict[str, set[str]] = {}
+    for match in result.matches:
+        matched_by_leg.setdefault(str(match.leg), set()).add(match.left_id)
+
     justified = 0
     missed = 0
     for exc in result.exceptions:
         expected = linked_by_leg.get(exc.leg, set())
-        if exc.entity_id in expected:
+        already_matched = exc.entity_id in matched_by_leg.get(exc.leg, set())
+        if exc.entity_id in expected and not already_matched:
             missed += 1
         else:
             justified += 1

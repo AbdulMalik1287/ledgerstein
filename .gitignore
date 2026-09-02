@@ -27,3 +27,6 @@ data/generated/
 Thumbs.db
 .idea/
 .vscode/
+
+# Frontend build artefacts beyond dist/
+frontend/.vite/
