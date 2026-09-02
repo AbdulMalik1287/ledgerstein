@@ -156,3 +156,19 @@ def test_business_day_helper_skips_weekends():
     friday = date(2026, 6, 5)
     assert friday.weekday() == 4
     assert Gen._add_business_days(friday, 2) == date(2026, 6, 9)
+
+
+def test_no_settlement_is_netted_to_zero(batch):
+    """A nil payout has no bank line, so it can never be reconciled.
+
+    Clawbacks larger than the payout they land on must be deferred, not
+    clamped, or the batch grows a settlement that is unmatchable by
+    construction and every recall figure is quietly understated.
+    """
+    for s in batch.settlements:
+        assert s.net_paise > 0, s.settlement_id
+
+
+def test_every_bank_row_moves_money(batch):
+    for t in batch.bank_txns:
+        assert (t.credit_paise > 0) != (t.debit_paise > 0), t.txn_id

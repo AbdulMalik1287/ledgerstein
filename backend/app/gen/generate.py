@@ -123,12 +123,21 @@ class Gen:
             if name in seen:
                 continue
             seen.add(name)
-            slug = name.split()[0].lower()
+            words = name.split()
+            slug = (words[0] + words[1]).lower()
+            # One customer in eight routes through a shared group mailbox, so
+            # an email does not uniquely identify a company. That is how real
+            # accounts-payable teams work and the matcher has to cope.
+            email = (
+                "ap@" + words[0].lower() + "group.co.in"
+                if self.rng.random() < 0.125
+                else "accounts@" + slug + ".co.in"
+            )
             out.append(
                 Customer(
                     customer_id="CUST%04d" % (len(out) + 1),
                     name=name,
-                    email="accounts@" + slug + ".co.in",
+                    email=email,
                     ifsc=self.rng.choice(IFSC_CODES),
                 )
             )
@@ -403,12 +412,24 @@ class Gen:
                 clawback[target] = clawback.get(target, 0) + pay.amount_paise
 
         settlements: list[Settlement] = []
+        carry = 0
         for settle_date in settle_dates:
             group = buckets[settle_date]
             gross = sum(p.amount_paise for p in group)
             fee = sum(p.fee_paise for p in group)
             tax = sum(p.tax_paise for p in group)
-            adjustment = min(clawback.get(settle_date, 0), gross - fee - tax)
+
+            # A clawback bigger than the payout it lands on is deferred to the
+            # next one rather than zeroing this one out. Gateways behave this
+            # way because a bank does not post a nil-value credit, and a payout
+            # netted to zero would leave a settlement row with no statement
+            # line to reconcile against -- an artefact, not a defect.
+            available = gross - fee - tax
+            wanted = clawback.get(settle_date, 0) + carry
+            if wanted >= available:
+                adjustment, carry = 0, wanted
+            else:
+                adjustment, carry = wanted, 0
             settlement = Settlement(
                 settlement_id=self._rid("setl_"),
                 utr=self._utr(settle_date),
@@ -765,6 +786,12 @@ def _write_csv(path: Path, header: list[str], rows: list[list]) -> None:
 def write_batch(batch: Batch, out_dir: Path) -> dict:
     """Write the three sources, the ground truth, and a manifest."""
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    _write_csv(
+        out_dir / "erp_customers.csv",
+        ["customer_id", "name", "email", "ifsc"],
+        [[c.customer_id, c.name, c.email, c.ifsc] for c in batch.customers],
+    )
 
     _write_csv(
         out_dir / "erp_invoices.csv",
