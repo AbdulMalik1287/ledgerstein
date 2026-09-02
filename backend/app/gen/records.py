@@ -130,6 +130,7 @@ class Batch:
     spurious_txn_ids: list[str] = field(default_factory=list)
 
     defects: list[Defect] = field(default_factory=list)
+    ambiguity_report: dict = field(default_factory=dict)
 
     def truth(self) -> dict:
         return {

@@ -193,6 +193,8 @@ def match_settlements_to_bank(sources: Sources) -> LegResult:
         _resolve_merged_payouts(remaining, credits, claimed, result)
     )
 
+    _flag_value_variance(sources, result)
+
     # Whatever is left on either side gets named, not buried.
     for settlement in remaining:
         if any(
@@ -219,6 +221,48 @@ def match_settlements_to_bank(sources: Sources) -> LegResult:
         if label:
             result.notes[txn.txn_id] = label
     return result
+
+
+def _flag_value_variance(sources: Sources, result: LegResult) -> None:
+    """A matched payout whose credit is short is still matched, and still wrong.
+
+    Reconciliation software that only reports matched-or-not hides this: the
+    UTR proves the credit belongs to the payout, so the link is certain, but a
+    correspondent bank has quietly taken a cut. Reporting it as a variance on a
+    good match -- rather than breaking the match or ignoring the gap -- is the
+    behaviour a controller actually wants.
+    """
+    bank = sources.bank_by_id()
+    settlements = sources.settlement_by_id()
+    per_txn: dict[str, list[str]] = {}
+    for match in result.matches:
+        if match.leg is Leg.SETTLEMENT_TO_BANK:
+            per_txn.setdefault(match.right_id, []).append(match.left_id)
+
+    for txn_id, settlement_ids in per_txn.items():
+        txn = bank.get(txn_id)
+        if txn is None:
+            continue
+        expected = sum(
+            settlements[s].net_paise for s in settlement_ids if s in settlements
+        )
+        gap = expected - txn.credit_paise
+        if abs(gap) <= ROUNDING_TOLERANCE_PAISE:
+            continue
+        result.exceptions.append(
+            Exception_(
+                entity_type="bank_txn",
+                entity_id=txn_id,
+                exception_type="VALUE_VARIANCE",
+                reason="Credit is %s short of the %s payout(s) matched to it. "
+                "The link is certain -- the UTR proves it -- so this is a "
+                "deduction to chase, not a mismatch to re-match."
+                % (_rupees(gap), len(settlement_ids)),
+                amount_paise=abs(gap),
+                leg=str(Leg.SETTLEMENT_TO_BANK),
+                candidates=settlement_ids,
+            )
+        )
 
 
 def _resolve_merged_payouts(
@@ -463,6 +507,41 @@ def match_payments_to_invoices(sources: Sources) -> LegResult:
         by_canon.setdefault(canon_ref(invoice.invoice_no), []).append(invoice)
 
     unresolved: list[PaymentRow] = []
+    customers_by_email = sources.customers_by_email()
+
+    def payer_ids(email: str) -> set[str]:
+        return {
+            c.customer_id for c in customers_by_email.get(email.lower(), [])
+        }
+
+    def payer_owns(payment: PaymentRow, invoice: InvoiceRow) -> bool | None:
+        """Does the payer own this invoice? ``None`` when it cannot be checked.
+
+        A reference on its own is not evidence. A transposed digit lands on
+        another customer's live invoice often enough that trusting the quote
+        alone produces confident, fully explainable, wrong matches -- and a
+        wrong match closes a book, which is far more expensive than a row left
+        in a queue.
+        """
+        owners = payer_ids(payment.customer_email)
+        if not owners:
+            return None
+        return invoice.customer_id in owners
+
+    def reject_crossed(payment: PaymentRow, invoice: InvoiceRow) -> None:
+        result.exceptions.append(
+            Exception_(
+                entity_type="payment",
+                entity_id=payment.payment_id,
+                exception_type="CROSSED_REFERENCE",
+                reason="Payment quotes %s, which is a live invoice raised on a "
+                "different customer (%s). The reference was not trusted."
+                % (invoice.invoice_no, invoice.customer_name),
+                amount_paise=payment.amount_paise,
+                leg=str(Leg.PAYMENT_TO_INVOICE),
+                candidates=[invoice.invoice_no],
+            )
+        )
 
     for payment in sources.payments:
         if not payment.invoice_ref:
@@ -471,11 +550,20 @@ def match_payments_to_invoices(sources: Sources) -> LegResult:
 
         exact = [i for i in invoices if i.invoice_no == payment.invoice_ref]
         if len(exact) == 1:
+            owned = payer_owns(payment, exact[0])
+            if owned is False:
+                reject_crossed(payment, exact[0])
+                unresolved.append(payment)
+                continue
             result.matches.append(
                 _leg3_match(
                     payment, exact[0], Tier.T1_EXACT, "invoice_ref_exact",
-                    "Payment quotes invoice %s verbatim." % exact[0].invoice_no,
-                    1.0,
+                    "Payment quotes invoice %s verbatim%s."
+                    % (
+                        exact[0].invoice_no,
+                        " and the payer owns it" if owned else "",
+                    ),
+                    1.0 if owned else 0.90,
                 )
             )
             continue
@@ -483,17 +571,24 @@ def match_payments_to_invoices(sources: Sources) -> LegResult:
         canon = canon_ref(payment.invoice_ref)
         near = by_canon.get(canon, [])
         if len(near) == 1:
+            owned = payer_owns(payment, near[0])
+            if owned is False:
+                reject_crossed(payment, near[0])
+                unresolved.append(payment)
+                continue
             result.matches.append(
                 _leg3_match(
                     payment, near[0], Tier.T2_DERIVED, "invoice_ref_canonical",
                     "Reference %r normalises to %s."
                     % (payment.invoice_ref, near[0].invoice_no),
-                    0.94,
+                    0.94 if owned else 0.86,
                 )
             )
             continue
 
         best, score = _best_fuzzy(canon, by_canon)
+        if best is not None and payer_owns(payment, best) is False:
+            best = None
         if best is not None and score >= FUZZY_REF_THRESHOLD:
             result.matches.append(
                 _leg3_match(
@@ -604,6 +699,29 @@ def _leg3_resolve_unreferenced(
             )
             used.add(exact[0].invoice_no)
             continue
+
+        if len(exact) > 1:
+            # Two open invoices, same customer, same amount, no reference.
+            # Nothing in the exports separates them, so name the ambiguity and
+            # carry both candidates rather than picking one and calling it a
+            # match -- or worse, calling the payment unbilled, which says the
+            # invoice does not exist when the problem is that two do.
+            exceptions.append(
+                Exception_(
+                    entity_type="payment",
+                    entity_id=payment.payment_id,
+                    exception_type="AMBIGUOUS",
+                    reason="Payment of %s carries no reference and fits %d open "
+                    "invoices from this customer equally well. Not decidable "
+                    "from the exports."
+                    % (_rupees(payment.amount_paise), len(exact)),
+                    amount_paise=payment.amount_paise,
+                    leg=str(Leg.PAYMENT_TO_INVOICE),
+                    candidates=[i.invoice_no for i in exact],
+                )
+            )
+            continue
+
         leftovers.append(payment)
 
     # Split payments: two rows from one customer that together clear an invoice.

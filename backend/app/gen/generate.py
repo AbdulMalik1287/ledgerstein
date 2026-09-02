@@ -20,6 +20,7 @@ import string
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
+from .ambiguity import inject as inject_ambiguity
 from .records import Batch, BankTxn, Customer, Defect, Invoice, Payment, Settlement
 from .scenarios import (
     BANK_DEFECT_WEIGHTS,
@@ -764,12 +765,15 @@ class Gen:
 
     # ------------------------------------------------------------------ build
 
-    def build(self, invoice_count: int, customer_count: int) -> Batch:
+    def build(
+        self, invoice_count: int, customer_count: int, ambiguity: float = 1.0
+    ) -> Batch:
         self.customers(customer_count)
         pairs = self.invoices(invoice_count)
         payments = self.payments(pairs)
         settlements = self.settle(payments)
         self.bank(settlements)
+        self.ambiguity = inject_ambiguity(self, rate=ambiguity)
         return self.batch
 
 
@@ -874,6 +878,7 @@ def write_batch(batch: Batch, out_dir: Path) -> dict:
             "defects": len(batch.defects),
         },
         "defect_mix": _defect_mix(batch),
+        "ambiguity": getattr(batch, "ambiguity_report", {}),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2), encoding="utf-8"
@@ -896,10 +901,13 @@ def generate(
     days: int,
     issue_days: int,
     name: str,
+    ambiguity: float = 1.0,
 ) -> Batch:
-    return Gen(
-        seed=seed, name=name, start=start, days=days, issue_days=issue_days
-    ).build(invoice_count=invoices, customer_count=customers)
+    gen = Gen(seed=seed, name=name, start=start, days=days, issue_days=issue_days)
+    gen.build(
+        invoice_count=invoices, customer_count=customers, ambiguity=ambiguity
+    )
+    return gen.batch
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -916,6 +924,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--out", default="data/generated/batch_a")
     parser.add_argument("--name", default=None)
+    parser.add_argument(
+        "--ambiguity",
+        type=float,
+        default=1.0,
+        help="0 for a solvable batch, 1 for one with irreducible ambiguity",
+    )
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out)
@@ -927,6 +941,7 @@ def main(argv: list[str] | None = None) -> int:
         days=args.days,
         issue_days=args.issue_days,
         name=args.name or out_dir.name,
+        ambiguity=args.ambiguity,
     )
     manifest = write_batch(batch, out_dir)
     print(json.dumps(manifest, indent=2))
