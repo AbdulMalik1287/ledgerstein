@@ -81,6 +81,10 @@ class Scorecard:
     throughput_rows_per_second: float
     legs: list[LegScore]
     tier_mix: dict[str, int]
+    tier_scores: dict[str, dict]
+    """Precision per tier. A headline match rate hides which tier earned it --
+    and whether the cheap certain rules or the expensive guessy ones are
+    carrying the number."""
     exception_mix: dict[str, int]
     exceptions_justified: int
     exceptions_missed: int
@@ -111,6 +115,7 @@ class Scorecard:
             "overall": overall.as_dict(),
             "legs": [l.as_dict() for l in self.legs],
             "tier_mix": self.tier_mix,
+            "tier_scores": self.tier_scores,
             "exceptions": {
                 "total": self.exceptions_justified + self.exceptions_missed,
                 "justified": self.exceptions_justified,
@@ -128,6 +133,7 @@ def load_truth(directory: Path) -> dict:
 def score(result: ReconResult, truth: dict) -> Scorecard:
     legs: list[LegScore] = []
     amounts = _amount_index(result)
+    tiers: dict[str, dict] = {}
 
     for leg, key in LEG_TRUTH_KEYS.items():
         expected: dict[str, str] = truth.get(key, {})
@@ -137,6 +143,18 @@ def score(result: ReconResult, truth: dict) -> Scorecard:
         # so compare on the pair rather than assuming a unique right-hand side.
         true_pairs = {(left, right) for left, right in expected.items()}
         predicted_pairs = [(m.left_id, m.right_id) for m in predicted]
+
+        for match in predicted:
+            bucket = tiers.setdefault(
+                str(match.tier),
+                {"predicted": 0, "correct": 0, "wrong": 0, "wrong_value_paise": 0},
+            )
+            bucket["predicted"] += 1
+            if (match.left_id, match.right_id) in true_pairs:
+                bucket["correct"] += 1
+            else:
+                bucket["wrong"] += 1
+                bucket["wrong_value_paise"] += amounts.get(match.left_id, 0)
 
         correct = [p for p in predicted_pairs if p in true_pairs]
         wrong = [p for p in predicted_pairs if p not in true_pairs]
@@ -161,6 +179,12 @@ def score(result: ReconResult, truth: dict) -> Scorecard:
             )
         )
 
+    for bucket in tiers.values():
+        bucket["precision"] = round(
+            bucket["correct"] / bucket["predicted"] if bucket["predicted"] else 0.0, 4
+        )
+        bucket["wrong_value_rupees"] = bucket.pop("wrong_value_paise") / 100
+
     justified, missed_link = _grade_exceptions(result, truth)
 
     return Scorecard(
@@ -170,6 +194,7 @@ def score(result: ReconResult, truth: dict) -> Scorecard:
         throughput_rows_per_second=result.throughput(),
         legs=legs,
         tier_mix=result.tier_mix(),
+        tier_scores=dict(sorted(tiers.items())),
         exception_mix=result.exception_mix(),
         exceptions_justified=justified,
         exceptions_missed=missed_link,
@@ -270,8 +295,16 @@ def render(card: Scorecard) -> str:
     )
     lines.append("")
     lines.append("Matches by tier:")
-    for tier, count in card.tier_mix.items():
-        lines.append("  %-16s %4d" % (tier, count))
+    for tier, stats in card.tier_scores.items():
+        lines.append(
+            "  %-16s %4d matched, %5.1f%% precision, Rs %.2f wrong"
+            % (
+                tier,
+                stats["predicted"],
+                stats["precision"] * 100,
+                stats["wrong_value_rupees"],
+            )
+        )
     lines.append("")
     lines.append(
         "Exception queue: %d rows worth Rs %.2f"

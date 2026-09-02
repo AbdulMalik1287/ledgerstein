@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     recon.add_argument(
         "--llm", action="store_true", help="let the adjudicator see the residue"
     )
-    recon.add_argument("--model", default="claude-sonnet-5")
+    recon.add_argument("--model", default="claude-opus-5")
     recon.add_argument("--max-llm-calls", type=int, default=25)
     recon.set_defaults(func=cmd_reconcile)
 

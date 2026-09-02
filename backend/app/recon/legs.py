@@ -308,8 +308,15 @@ def _resolve_merged_payouts(
                     tier=Tier.T3_INFERRED,
                     rule="merged_payout_residual",
                     reason="Credit %s exceeds the payout its UTR names by %s, "
-                    "which is exactly this payout plus %d other(s)."
-                    % (txn.txn_id, _rupees(residual), len(found) - 1),
+                    "which is exactly %s."
+                    % (
+                        txn.txn_id,
+                        _rupees(residual),
+                        "this payout"
+                        if len(found) == 1
+                        else "this payout and %d other%s"
+                        % (len(found) - 1, "" if len(found) == 2 else "s"),
+                    ),
                     confidence=0.82,
                     amount_paise=settlement.net_paise,
                 )
