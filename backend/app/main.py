@@ -8,23 +8,73 @@ belongs in the engine.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from .db import AuditRow, ExceptionRow, MatchRow, Run, get_session, init_db, persist
+from .gen.generate import generate, write_batch
 from .recon.engine import reconcile_directory
 from .recon.metrics import load_truth, score
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "generated"
 
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+DEMO_BATCHES = (
+    # name, seed, invoices, customers
+    ("batch_a", 7, 240, 18),
+    ("batch_b", 4291, 260, 21),
+)
+
+
+def ensure_demo_data() -> None:
+    """Make the service self-sufficient on a cold, empty deployment.
+
+    The generator is deterministic, so the batches are rebuilt from their seeds
+    rather than committed -- a fresh container produces byte-identical data to
+    the one this was developed against. Then one batch is reconciled so the
+    dashboard opens showing real work instead of an empty shell.
+    """
+    for name, seed, invoices, customers in DEMO_BATCHES:
+        directory = DATA_ROOT / name
+        if (directory / "bank_statement.csv").exists():
+            continue
+        write_batch(
+            generate(
+                seed=seed,
+                invoices=invoices,
+                customers=customers,
+                start=date(2026, 6, 1),
+                days=45,
+                issue_days=30,
+                name=name,
+            ),
+            directory,
+        )
+
+    with get_session() as session:
+        if session.scalar(select(func.count()).select_from(Run)):
+            return
+    directory = DATA_ROOT / "batch_b"
+    if not (directory / "bank_statement.csv").exists():
+        return
+    result = reconcile_directory(directory)
+    card = None
+    if (directory / "truth.json").exists():
+        card = score(result, load_truth(directory)).as_dict()
+    persist(result, card)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    ensure_demo_data()
     yield
 
 
@@ -366,3 +416,10 @@ def _exception_json(row: ExceptionRow) -> dict:
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok", "data_root": str(DATA_ROOT), "batches": len(list_batches())}
+
+
+# Mounted last so every /api route above wins the match. ``html=True`` serves
+# index.html for unknown paths, which keeps a refresh on any dashboard tab from
+# 404-ing.
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="dashboard")

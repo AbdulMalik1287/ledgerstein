@@ -144,7 +144,21 @@ Three rules govern [`app/recon/metrics.py`](backend/app/recon/metrics.py):
 Precision is also reported **per tier**, because a headline match rate hides
 whether the cheap certain rules or the expensive inferred ones earned it.
 
-## Running it
+## Deploying
+
+The whole thing ships as one container — FastAPI serves the API and the built
+dashboard on a single origin — and it self-seeds on first start, regenerating
+both batches from their seeds and reconciling one. A cold container reproduces
+the figures above exactly.
+
+```bash
+docker build -t ledgerstein . && docker run --rm -p 8000:8000 ledgerstein
+```
+
+`render.yaml` in the repo root makes this a one-click Render Blueprint. Full
+instructions and the free-tier caveats: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+## Running it locally
 
 ```bash
 # 1. Backend
@@ -183,6 +197,8 @@ invariants, the adjudicator's safety properties, and the API end to end.
   diagnosed.
 - **[docs/PITCH_SCRIPT.md](docs/PITCH_SCRIPT.md)** — the 5-minute demo script:
   spoken narration, screen directions, and the exact rows to point at.
+- **[docs/DEPLOY.md](docs/DEPLOY.md)** — one-container deployment. Render,
+  Hugging Face Spaces or Fly, plus the free-tier cold-start caveat.
 
 ## Repo layout
 

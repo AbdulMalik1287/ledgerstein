@@ -9,6 +9,7 @@ system unrecorded.
 from __future__ import annotations
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -202,7 +203,12 @@ class Engine:
         )
 
         return ReconResult(
-            run_id=run_id or started.strftime("run_%Y%m%d_%H%M%S"),
+            # Second resolution alone collides when two runs start inside the
+            # same second -- a double-click on Reconcile is enough -- and the
+            # collision surfaces as a primary key violation on persist.
+            run_id=run_id
+            or "run_%s_%s"
+            % (started.strftime("%Y%m%d_%H%M%S"), uuid.uuid4().hex[:6]),
             batch=batch,
             started_at=started,
             duration_seconds=duration,
