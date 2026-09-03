@@ -181,6 +181,8 @@ invariants, the adjudicator's safety properties, and the API end to end.
 - **[docs/SUBMISSION.md](docs/SUBMISSION.md)** — Buildathon submission, including
   a write-up of the seven things that broke during the build and how each was
   diagnosed.
+- **[docs/PITCH_SCRIPT.md](docs/PITCH_SCRIPT.md)** — the 5-minute demo script:
+  spoken narration, screen directions, and the exact rows to point at.
 
 ## Repo layout
 
@@ -195,7 +197,7 @@ backend/
   tests/       37 tests
 frontend/      React + Vite + Tailwind dashboard
 data/          generated batches (gitignored)
-docs/          architecture reference + submission write-up
+docs/          architecture reference, submission write-up, demo script
 ```
 
 ## Design notes

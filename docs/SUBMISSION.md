@@ -55,7 +55,10 @@ Full functionality and architecture reference: [`docs/ARCHITECTURE.md`](ARCHITEC
 
 > **Not yet recorded.** Record, upload unlisted, and replace this line with the URL.
 
-Suggested cut, timed to five minutes:
+Word-for-word script, screen-by-screen directions, a pre-flight checklist and the
+exact rows to point at: **[docs/PITCH_SCRIPT.md](PITCH_SCRIPT.md)**.
+
+Cut summary:
 
 | Time | Beat | Show |
 |---|---|---|
