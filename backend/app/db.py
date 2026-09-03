@@ -32,7 +32,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
-DB_URL = os.environ.get("KOSH_DB_URL", "sqlite:///./kosh.sqlite3")
+DB_URL = os.environ.get("LEDGERSTEIN_DB_URL", "sqlite:///./ledgerstein.sqlite3")
 
 
 class Base(DeclarativeBase):

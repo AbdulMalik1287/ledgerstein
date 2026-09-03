@@ -1,6 +1,5 @@
-# Kosh — AI Finance Controller
+# LedgerStein — AI Finance Controller
 
-> कोष *(kosh)* — treasury.
 > Three-way reconciliation across a merchant's ERP, payment gateway and bank,
 > with an honest exception list.
 
@@ -26,7 +25,7 @@ are asserted by hand.
 
 The residue is not a rounding error, it is the point. Those 8 misses are
 payments that fit two open invoices from the same customer equally well, for
-the same amount, days apart. Nothing in the exports separates them. Kosh
+the same amount, days apart. Nothing in the exports separates them. LedgerStein
 declines them and shows both candidates, which is the correct answer.
 
 ---
@@ -43,7 +42,7 @@ A merchant's money leaves three different trails and none of them agree:
 
 Finance teams close this gap by hand, in a spreadsheet, monthly.
 
-## What Kosh does
+## What LedgerStein does
 
 ```
 ERP invoice ──leg 3── PG payment ──leg 2── PG settlement ──leg 1── bank credit

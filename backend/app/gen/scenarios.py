@@ -1,6 +1,6 @@
 """Defect taxonomy for the synthetic three-source dataset.
 
-Every row Kosh generates is either clean or carries exactly one seeded defect.
+Every row LedgerStein generates is either clean or carries exactly one seeded defect.
 The defect label is written to ``truth.json`` so the metrics harness can report
 recall *per defect class* rather than one averaged number that hides the hard
 cases.

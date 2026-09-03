@@ -1,4 +1,4 @@
-"""HTTP surface for Kosh.
+"""HTTP surface for LedgerStein.
 
 Deliberately small. The dashboard needs to start a run, read what it produced,
 work the exception queue, and pull the audit trail for any row. Everything else
@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Kosh",
+    title="LedgerStein",
     description="AI Finance Controller: three-way reconciliation with an "
     "honest exception list.",
     version="0.1.0",

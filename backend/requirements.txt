@@ -1,4 +1,4 @@
-# Kosh backend. The reconciliation core is deliberately stdlib-only -- no
+# LedgerStein backend. The reconciliation core is deliberately stdlib-only -- no
 # pandas, no rapidfuzz -- so the matcher stays portable and its throughput
 # numbers are honest rather than borrowed from a C extension.
 fastapi==0.141.1

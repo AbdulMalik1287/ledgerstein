@@ -255,7 +255,7 @@ def render(card: Scorecard) -> str:
     """A scorecard a judge can read without opening a JSON viewer."""
     lines: list[str] = []
     overall = card.overall
-    lines.append("Kosh reconciliation scorecard -- batch %s" % card.batch)
+    lines.append("LedgerStein reconciliation scorecard -- batch %s" % card.batch)
     lines.append("=" * 68)
     lines.append(
         "%d source rows in %.3fs (%.0f rows/sec), %d LLM calls"

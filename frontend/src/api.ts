@@ -1,5 +1,5 @@
 /**
- * Typed client for the Kosh API.
+ * Typed client for the LedgerStein API.
  *
  * Every shape here mirrors what the backend actually returns. Nothing is
  * invented on this side -- if a number appears on screen, the engine computed

@@ -68,7 +68,7 @@ export default function App() {
       <header className="sticky top-0 z-20 border-b border-line bg-ink-900/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-4 px-5 py-3">
           <div className="flex items-baseline gap-2.5">
-            <span className="text-lg font-semibold tracking-tight">Kosh</span>
+            <span className="text-lg font-semibold tracking-tight">LedgerStein</span>
             <span className="hidden text-xs text-mute sm:inline">
               AI Finance Controller · three-way reconciliation
             </span>
@@ -152,7 +152,7 @@ export default function App() {
           <div className="rounded-lg border border-line bg-ink-800 px-6 py-16 text-center">
             <h1 className="text-lg font-semibold">No run yet</h1>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-mute">
-              Pick a batch and reconcile it. Kosh reads the ERP ledger, the
+              Pick a batch and reconcile it. LedgerStein reads the ERP ledger, the
               gateway exports and the bank statement, then reports what it
               matched, what it refused to match, and why.
             </p>

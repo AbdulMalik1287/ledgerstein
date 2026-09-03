@@ -1,4 +1,4 @@
-# Kosh dashboard
+# LedgerStein dashboard
 
 React + Vite + Tailwind front end for the reconciliation engine.
 

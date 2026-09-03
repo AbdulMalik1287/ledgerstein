@@ -59,7 +59,7 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="kosh")
+    parser = argparse.ArgumentParser(prog="ledgerstein")
     sub = parser.add_subparsers(dest="command", required=True)
 
     recon = sub.add_parser("reconcile", help="reconcile a generated batch")

@@ -25,10 +25,10 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def client(tmp_path_factory, monkeypatch_module=None):
     """A client bound to a fresh SQLite file per test session."""
-    db_path = tmp_path_factory.mktemp("kosh") / "test.sqlite3"
+    db_path = tmp_path_factory.mktemp("ledgerstein") / "test.sqlite3"
     import os
 
-    os.environ["KOSH_DB_URL"] = "sqlite:///%s" % db_path.as_posix()
+    os.environ["LEDGERSTEIN_DB_URL"] = "sqlite:///%s" % db_path.as_posix()
 
     from app import db as db_module
 
