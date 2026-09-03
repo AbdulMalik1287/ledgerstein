@@ -173,6 +173,15 @@ cd ../frontend && npm install && npm run dev # http://localhost:5173
 Tests: `cd backend && python -m pytest` — 37 passing, covering generator
 invariants, the adjudicator's safety properties, and the API end to end.
 
+## Documentation
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — functionality and architecture
+  reference: the four legs, all seventeen rules, the exception taxonomy, the LLM
+  safety contract, the data model, and the API.
+- **[docs/SUBMISSION.md](docs/SUBMISSION.md)** — Buildathon submission, including
+  a write-up of the seven things that broke during the build and how each was
+  diagnosed.
+
 ## Repo layout
 
 ```
@@ -186,6 +195,7 @@ backend/
   tests/       37 tests
 frontend/      React + Vite + Tailwind dashboard
 data/          generated batches (gitignored)
+docs/          architecture reference + submission write-up
 ```
 
 ## Design notes
