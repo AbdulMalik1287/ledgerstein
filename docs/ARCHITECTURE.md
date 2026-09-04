@@ -244,15 +244,18 @@ it just burns the clock.
 
 ### What the tier does on this batch
 
-Verified live against Gemini on `batch_b`: six ambiguous rows, **four declines,
-zero matches, precision unchanged at 100%**. It adds no recall, and that is the
-correct result — every row it sees is undecidable by construction. The value is
-that each one now carries a stated reason a controller can read:
+Verified live on `batch_b` against **Groq (`openai/gpt-oss-120b`)**: six
+ambiguous rows, **six declines, zero matches, zero errors, precision unchanged
+at 100%**, in **12 seconds**. It adds no recall, and that is the correct result —
+every row it sees is undecidable by construction. The value is that each one now
+carries a stated reason a controller can read:
 
-> *"The candidate invoices share the same customer, amount, and PO reference,
-> differing by only one day in issue date."*
+> *"Invoices differ only by one day in issue and due dates, making them
+> indistinguishable."*
 
-Six rows cost about 85 seconds wall-clock. The prompt explicitly forbids
+Also verified against Gemini (`gemini-3.6-flash`): four declines, two dropped to
+free-tier errors, same precision, but ~85 seconds. Groq is the better demo
+backend by an order of magnitude. The prompt explicitly forbids
 reasoning from `erp_status`, which the generator seeds as deliberately stale —
 an earlier version omitted that and the model produced one confident wrong match
 worth ₹1,16,517. See `docs/SUBMISSION.md` §9.

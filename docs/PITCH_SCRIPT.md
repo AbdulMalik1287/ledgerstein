@@ -217,9 +217,9 @@ them:
 > scorecard does.
 >
 > And the AI tier only sees what the rules refused. On this batch it looked at
-> six rows and declined four of them — 'same customer, same amount, same PO
-> reference, one day apart.' It added nothing to recall, which is the right
-> answer, because those rows genuinely cannot be decided.
+> six rows and declined every one — 'invoices differ only by one day in issue
+> and due dates, making them indistinguishable.' It added nothing to recall,
+> which is the right answer, because those rows genuinely cannot be decided.
 >
 > The first time I ran it live, it did make a match. A wrong one, worth one lakh
 > sixteen thousand. It had reasoned from the ERP's paid flag — a field this
@@ -231,11 +231,15 @@ them:
 
 *(165 words)*
 
-> **If you have a key in the demo:** tick **Adjudicator** before hitting
-> Reconcile in Beat 2, and the audit trail in Beat 5 will carry
-> `llm:gemini/gemini-3.6-flash` decline lines you can point at. Budget ~85s for
-> six rows, so start the run before you begin talking. Without a key the tier
-> logs a skip and everything else is unchanged.
+> **Turn the adjudicator on for the demo.** Export `GROQ_API_KEY`, restart the
+> API, and tick **Adjudicator** before hitting Reconcile in Beat 2. Six rows cost
+> **about 12 seconds**, so it does not disrupt the pacing. The audit trail in
+> Beat 5 then carries `llm:groq/openai/gpt-oss-120b` decline lines with
+> confidences around 0.95 you can point at directly.
+>
+> Use Groq, not Gemini: same result, but ~12s against ~85s, and Gemini's free
+> tier drops calls under load. Without any key the tier logs a skip and
+> everything else is unchanged.
 
 ---
 

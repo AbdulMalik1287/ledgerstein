@@ -175,7 +175,7 @@ python -m app.cli reconcile ../data/generated/batch_b --audit trail.txt --json c
 
 # Optionally let the adjudicator see the ambiguous residue.
 # Any one of these is enough; gemini and groq are free and need no card.
-export GEMINI_API_KEY=...
+export GROQ_API_KEY=...        # free, no card: console.groq.com/keys
 python -m app.cli reconcile ../data/generated/batch_b --llm
 
 # 2. API

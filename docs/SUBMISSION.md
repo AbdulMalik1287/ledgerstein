@@ -323,12 +323,28 @@ exponential backoff, only on 429 and 5xx, because a 401 is a fact rather than a
 blip. Six rows take about 85 seconds wall-clock — worth knowing before demoing
 it live.
 
+### Verified live
+
+Both hosted backends now run end to end against their real APIs on `batch_b`:
+
+| Backend | Model | Result | Time |
+|---|---|---|---|
+| **Groq** | `openai/gpt-oss-120b` | 6 considered, **6 declined**, 0 errors | **12s** |
+| Gemini | `gemini-3.6-flash` | 6 considered, 4 declined, 2 free-tier errors | ~85s |
+
+Precision stays at 100% either way. The tier adds no recall, which is the
+correct outcome — every row it sees is undecidable by construction — and every
+decline carries a reason a controller can read.
+
+Both defaults had to be corrected against the live model list: `gemini-2.0-flash`
+and `llama-3.3-70b-versatile` were both retired. Listing a provider's models
+before trusting a hardcoded default is now the first step when wiring one up.
+
 ### Still open
 
-**Groq has not been exercised against its real API.** Gemini is now verified end to end against
-the live API; Groq's request shape is only checked against a mock transport, so
-its server's acceptance of it is unconfirmed. Set `GROQ_API_KEY` and run with
-`--provider groq` to close that.
+**Ollama is coded and unit-tested but has never run against a real local model.**
+It exists as the backstop for the failure below, and closing that gap only needs
+`ollama pull qwen3:4b` on a machine with the disk to spare.
 
 The headline 100%/98.6% figures are **pure deterministic matching** — the tier
 adds no matches on this batch, by design, because every row it sees is

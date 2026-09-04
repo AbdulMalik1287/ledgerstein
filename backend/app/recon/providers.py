@@ -164,7 +164,7 @@ class GroqProvider:
     """Groq's free tier, over the OpenAI-compatible endpoint."""
 
     name = "groq"
-    default_model = "llama-3.3-70b-versatile"
+    default_model = "openai/gpt-oss-120b"
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
     def __init__(self, model: str = "", api_key: str = "", transport=None) -> None:
