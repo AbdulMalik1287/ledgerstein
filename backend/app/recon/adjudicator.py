@@ -1,4 +1,4 @@
-"""Tier 4: ask Claude about the rows the rules refused to decide.
+"""Tier 4: ask a model about the rows the rules refused to decide.
 
 This tier exists for one shape of problem -- a payment that fits two open
 invoices equally well on amount, customer and date. No arithmetic separates
@@ -20,19 +20,21 @@ produce a wrong one.
 Every call is **logged and counted** -- inputs, decision, reason, confidence --
 and the tier is bounded by ``max_calls`` so a large batch cannot quietly turn
 into a large bill.
+
+The backend is pluggable (see ``providers.py``) because those four guarantees
+live out here, around the call, rather than inside it. Swapping Anthropic for
+Gemini or Groq cannot widen what this tier is allowed to believe.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
+from . import providers
 from .model import Exception_, Leg, Match, Sources, Tier
-
-DEFAULT_MODEL = "claude-opus-5"
 
 SYSTEM_PROMPT = """You are the final tier of a payment reconciliation engine \
 for an Indian merchant. Deterministic rules have already resolved everything \
@@ -59,7 +61,7 @@ Rules you must follow:
 
 
 class Verdict(BaseModel):
-    """The shape Claude must answer in."""
+    """The shape every backend must answer in."""
 
     decision: str = Field(description="Either 'match' or 'decline'.")
     invoice_no: str = Field(
@@ -91,33 +93,38 @@ class Adjudicator:
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
+        provider: str = "auto",
+        model: str = "",
         max_calls: int = 25,
         min_confidence: float = 0.60,
-        client=None,
+        backend=None,
     ) -> None:
+        self.provider_name = provider
         self.model = model
         self.max_calls = max_calls
         self.min_confidence = min_confidence
         self.stats = AdjudicatorStats()
-        self._client = client
+        self._backend = backend
         self._unavailable = ""
 
-    # ---------------------------------------------------------------- client
+    # --------------------------------------------------------------- backend
 
-    def _get_client(self):
-        if self._client is not None:
-            return self._client
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            self._unavailable = "ANTHROPIC_API_KEY is not set"
+    def _get_backend(self):
+        """Resolve a model backend, or record why there isn't one.
+
+        ``auto`` takes the first provider with a key present. Which one answered
+        goes into the audit trail as the actor, so a run is always traceable to
+        the model that made its calls.
+        """
+        if self._backend is not None:
+            return self._backend
+        backend, reason = providers.build(self.provider_name, self.model)
+        if backend is None:
+            self._unavailable = reason
             return None
-        try:
-            import anthropic
-        except ImportError:
-            self._unavailable = "the anthropic package is not installed"
-            return None
-        self._client = anthropic.Anthropic()
-        return self._client
+        self._backend = backend
+        self.model = backend.model
+        return backend
 
     # ------------------------------------------------------------ entry point
 
@@ -142,8 +149,8 @@ class Adjudicator:
         if not queue:
             return matches, resolved, 0
 
-        client = self._get_client()
-        if client is None:
+        backend = self._get_backend()
+        if backend is None:
             logger(
                 actor="llm:unavailable",
                 action="skip",
@@ -160,7 +167,7 @@ class Adjudicator:
         for exc in queue:
             if self.stats.calls >= self.max_calls:
                 logger(
-                    actor="llm:%s" % self.model,
+                    actor=self._actor(),
                     action="skip",
                     leg=exc.leg,
                     subject=exc.entity_id,
@@ -175,7 +182,7 @@ class Adjudicator:
                 continue
 
             allowed = {c.invoice_no for c in candidates}
-            verdict = self._ask(client, payment, candidates, logger, exc)
+            verdict = self._ask(backend, payment, candidates, logger, exc)
             if verdict is None:
                 continue
 
@@ -183,7 +190,7 @@ class Adjudicator:
             if verdict.decision != "match" or not verdict.invoice_no:
                 self.stats.declined += 1
                 logger(
-                    actor="llm:%s" % self.model,
+                    actor=self._actor(),
                     action="decline",
                     leg=exc.leg,
                     subject=exc.entity_id,
@@ -195,7 +202,7 @@ class Adjudicator:
             if verdict.invoice_no not in allowed:
                 self.stats.rejected_offlist += 1
                 logger(
-                    actor="llm:%s" % self.model,
+                    actor=self._actor(),
                     action="reject",
                     leg=exc.leg,
                     subject=exc.entity_id,
@@ -210,7 +217,7 @@ class Adjudicator:
             if verdict.confidence < self.min_confidence:
                 self.stats.declined += 1
                 logger(
-                    actor="llm:%s" % self.model,
+                    actor=self._actor(),
                     action="decline",
                     leg=exc.leg,
                     subject=exc.entity_id,
@@ -236,7 +243,7 @@ class Adjudicator:
             )
             resolved.add(id(exc))
             logger(
-                actor="llm:%s" % self.model,
+                actor=self._actor(),
                 action="match",
                 leg=exc.leg,
                 subject="%s -> %s" % (payment.payment_id, verdict.invoice_no),
@@ -248,22 +255,28 @@ class Adjudicator:
 
     # ------------------------------------------------------------------ call
 
-    def _ask(self, client, payment, candidates, logger, exc) -> Verdict | None:
+    def _actor(self) -> str:
+        """Names the backend that answered, for the audit trail."""
+        backend = self._backend
+        if backend is None:
+            return "llm:%s" % (self.model or self.provider_name)
+        return "llm:%s/%s" % (backend.name, backend.model)
+
+    def _ask(self, backend, payment, candidates, logger, exc) -> Verdict | None:
+        """One call, one validated verdict, or None.
+
+        Validation lives here so a backend returning the wrong shape is a failed
+        call rather than a malformed match. The whitelist check that follows in
+        ``adjudicate`` is a separate gate and does not depend on this one.
+        """
         prompt = _render_case(payment, candidates)
         self.stats.calls += 1
         try:
-            response = client.messages.parse(
-                model=self.model,
-                max_tokens=2000,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-                output_format=Verdict,
-            )
-            return response.parsed_output
+            return Verdict.model_validate(backend.complete(SYSTEM_PROMPT, prompt))
         except Exception as error:  # noqa: BLE001 - the tier must never crash a run
             self.stats.errors += 1
             logger(
-                actor="llm:%s" % self.model,
+                actor=self._actor(),
                 action="error",
                 leg=exc.leg,
                 subject=exc.entity_id,

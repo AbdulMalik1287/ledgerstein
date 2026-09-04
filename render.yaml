@@ -14,7 +14,13 @@ services:
       # exception resolutions made since.
       - key: LEDGERSTEIN_DB_URL
         value: sqlite:///./ledgerstein.sqlite3
-      # Leave unset to keep the LLM tier off. Set it in the Render dashboard
-      # (never in this file) to enable the adjudicator.
+      # Tier 4 needs one of these. Set whichever you have in the Render
+      # dashboard -- never in this file. Gemini and Groq both have a free tier
+      # that needs no card. Leave all three unset and the adjudicator skips
+      # the ambiguous rows and records why.
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
         sync: false

@@ -17,27 +17,27 @@ from app.recon.adjudicator import Adjudicator, Verdict
 from app.recon.model import Exception_, InvoiceRow, Leg, PaymentRow, Sources
 
 
-class StubResponse:
-    def __init__(self, verdict: Verdict) -> None:
-        self.parsed_output = verdict
+class StubBackend:
+    """Stands in for a model. Records what it was asked, returns what it was told.
 
+    Injected where a real provider would go, so every guard under test runs the
+    same code path it runs in production -- the guards live around the call, not
+    inside it, which is the whole reason the backend is swappable.
+    """
 
-class StubMessages:
-    def __init__(self, verdicts: list[Verdict | Exception]) -> None:
+    name = "stub"
+    model = "stub-1"
+
+    def __init__(self, *verdicts) -> None:
         self._verdicts = list(verdicts)
-        self.calls: list[dict] = []
+        self.calls: list[tuple[str, str]] = []
 
-    def parse(self, **kwargs):
-        self.calls.append(kwargs)
+    def complete(self, system: str, prompt: str) -> dict:
+        self.calls.append((system, prompt))
         nxt = self._verdicts.pop(0)
         if isinstance(nxt, Exception):
             raise nxt
-        return StubResponse(nxt)
-
-
-class StubClient:
-    def __init__(self, *verdicts) -> None:
-        self.messages = StubMessages(list(verdicts))
+        return nxt.model_dump()
 
 
 def _sources() -> Sources:
@@ -104,7 +104,7 @@ def test_a_valid_choice_becomes_a_t4_match(events):
         reason="Older of two identical invoices; customers clear the oldest first.",
         confidence=0.72,
     )
-    adj = Adjudicator(client=StubClient(verdict))
+    adj = Adjudicator(backend=StubBackend(verdict))
     exc = _exception()
     matches, resolved, calls = adj.adjudicate(_sources(), [exc], events)
 
@@ -129,7 +129,7 @@ def test_an_invented_invoice_number_is_rejected_not_matched(events):
         reason="Confident and completely made up.",
         confidence=0.99,
     )
-    adj = Adjudicator(client=StubClient(verdict))
+    adj = Adjudicator(backend=StubBackend(verdict))
     exc = _exception()
     matches, resolved, _ = adj.adjudicate(_sources(), [exc], events)
 
@@ -146,7 +146,7 @@ def test_a_hedged_answer_falls_below_the_confidence_floor(events):
         reason="Could be either, honestly.",
         confidence=0.35,
     )
-    adj = Adjudicator(client=StubClient(verdict), min_confidence=0.60)
+    adj = Adjudicator(backend=StubBackend(verdict), min_confidence=0.60)
     matches, resolved, _ = adj.adjudicate(_sources(), [_exception()], events)
 
     assert matches == []
@@ -161,7 +161,7 @@ def test_an_explicit_decline_leaves_the_row_in_the_queue(events):
         reason="Both invoices are identical on every field given.",
         confidence=0.5,
     )
-    adj = Adjudicator(client=StubClient(verdict))
+    adj = Adjudicator(backend=StubBackend(verdict))
     matches, resolved, _ = adj.adjudicate(_sources(), [_exception()], events)
 
     assert matches == []
@@ -170,7 +170,7 @@ def test_an_explicit_decline_leaves_the_row_in_the_queue(events):
 
 
 def test_an_api_failure_does_not_abort_the_run(events):
-    adj = Adjudicator(client=StubClient(RuntimeError("upstream exploded")))
+    adj = Adjudicator(backend=StubBackend(RuntimeError("upstream exploded")))
     matches, resolved, _ = adj.adjudicate(_sources(), [_exception()], events)
 
     assert matches == []
@@ -185,7 +185,7 @@ def test_the_call_budget_is_enforced(events):
         reason="Fine.",
         confidence=0.9,
     )
-    adj = Adjudicator(client=StubClient(verdict), max_calls=1)
+    adj = Adjudicator(backend=StubBackend(verdict), max_calls=1)
     exceptions = [_exception(), _exception(), _exception()]
     matches, _, calls = adj.adjudicate(_sources(), exceptions, events)
 
@@ -195,7 +195,7 @@ def test_the_call_budget_is_enforced(events):
 
 
 def test_only_ambiguous_rows_with_candidates_are_offered(events):
-    adj = Adjudicator(client=StubClient())
+    adj = Adjudicator(backend=StubBackend())
     unrelated = Exception_(
         entity_type="settlement",
         entity_id="setl_9",
@@ -210,7 +210,8 @@ def test_only_ambiguous_rows_with_candidates_are_offered(events):
 
 
 def test_missing_credentials_skip_rather_than_guess(events, monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    for key in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GROQ_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
     adj = Adjudicator()
     matches, resolved, calls = adj.adjudicate(_sources(), [_exception()], events)
 
@@ -222,10 +223,12 @@ def test_the_prompt_carries_both_candidates_verbatim(events):
     verdict = Verdict(
         decision="decline", invoice_no="", reason="Symmetric.", confidence=0.4
     )
-    client = StubClient(verdict)
-    Adjudicator(client=client).adjudicate(_sources(), [_exception()], events)
+    backend = StubBackend(verdict)
+    Adjudicator(backend=backend).adjudicate(_sources(), [_exception()], events)
 
-    prompt = client.messages.calls[0]["messages"][0]["content"]
+    system, prompt = backend.calls[0]
     assert "INV-2026-0001" in prompt
     assert "INV-2026-0002" in prompt
-    assert client.messages.calls[0]["output_format"] is Verdict
+    # The rule the whole tier rests on has to reach the model as well as being
+    # enforced after it.
+    assert "only choose an invoice_no that appears in the candidate list" in system

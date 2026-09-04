@@ -173,8 +173,9 @@ python -m app.gen.generate --seed 4291 --invoices 260 --customers 21 --out ../da
 python -m app.cli reconcile ../data/generated/batch_b
 python -m app.cli reconcile ../data/generated/batch_b --audit trail.txt --json card.json
 
-# Optionally let the adjudicator see the ambiguous residue
-export ANTHROPIC_API_KEY=...
+# Optionally let the adjudicator see the ambiguous residue.
+# Any one of these is enough; gemini and groq are free and need no card.
+export GEMINI_API_KEY=...
 python -m app.cli reconcile ../data/generated/batch_b --llm
 
 # 2. API
@@ -184,8 +185,9 @@ python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000/docs
 cd ../frontend && npm install && npm run dev # http://localhost:5173
 ```
 
-Tests: `cd backend && python -m pytest` — 37 passing, covering generator
-invariants, the adjudicator's safety properties, and the API end to end.
+Tests: `cd backend && python -m pytest` — 46 passing, covering generator
+invariants, the adjudicator's safety properties, the model backends, and the
+API end to end.
 
 ## Documentation
 

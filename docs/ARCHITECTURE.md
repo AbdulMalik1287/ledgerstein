@@ -18,7 +18,7 @@ cd backend && python -m app.cli reconcile ../data/generated/batch_b
 | Recall | 98.6% |
 | Cost of false matches | ₹0 |
 | Exception queue | 93 rows, ₹1.17 Cr exposure |
-| Tests | 37 |
+| Tests | 46 |
 
 ---
 
@@ -203,9 +203,32 @@ row stays in the queue, and a `reject` event lands in the trail. Eight further
 tests cover the confidence floor, explicit declines, API failures, the call
 budget, credential absence, and that both candidates reach the prompt verbatim.
 
-Model and parameters live in `app/recon/adjudicator.py`: `claude-opus-5` by
-default, called through `client.messages.parse()` with a Pydantic `Verdict`
-schema so the response shape is guaranteed before the whitelist check runs.
+### The backend is swappable, the guards are not
+
+All four constraints live *outside* the model call, in `adjudicator.py`. A
+backend in `providers.py` only has to turn a system prompt and a user prompt
+into a dict; it cannot widen what the tier is allowed to believe. That is what
+makes swapping one for another cheap and safe.
+
+| Backend | Key | Cost | Get one |
+|---|---|---|---|
+| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
+| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `groq` | `GROQ_API_KEY` | **free tier, no card** | [console.groq.com/keys](https://console.groq.com/keys) |
+
+`auto` (the default) takes the first backend with a key set, in that order. Set
+none and the tier skips the ambiguous rows and records why — which is the safe
+default, not a failure.
+
+Anthropic uses the official SDK with a Pydantic `Verdict` schema. Gemini and
+Groq are reached over plain HTTP with `httpx` — already a dependency, and two
+POST requests did not justify two more SDKs in the image. Both are pinned to
+`temperature: 0` and structured-output mode, so a verdict does not vary between
+identical runs.
+
+Whichever answered is named in the audit trail as the actor, e.g.
+`llm:gemini/gemini-2.0-flash`, so a run is always traceable to the model that
+made its calls. Override the model per backend with `--model`.
 
 ## 8. How it is scored
 
@@ -375,18 +398,18 @@ python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000/docs
 cd ../frontend && npm install && npm run dev # http://localhost:5173
 
 # Tests
-cd backend && python -m pytest               # 37 passing
+cd backend && python -m pytest               # 46 passing
 ```
 
-Fifteen tests cover generator invariants — settlement arithmetic closing to the
-paisa, the statement balance running as a true total, nothing unmatchable by
-construction. Nine cover the adjudicator's safety properties. Eleven exercise the
-API end to end against the real engine.
+Seventeen tests cover generator invariants — settlement arithmetic closing to
+the paisa, the statement balance running as a true total, nothing unmatchable by
+construction. Nine cover the adjudicator's safety properties and nine more the
+model backends' request and response wiring. Eleven exercise the API end to end
+against the real engine.
 
 ### Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `LEDGERSTEIN_DB_URL` | `sqlite:///./ledgerstein.sqlite3` | Where runs are persisted |
-| `ANTHROPIC_API_KEY` | — | Absent means tier 4 skips and logs why |
-| `LEDGERSTEIN_MODEL` | `claude-opus-5` | Adjudicator model |
+| `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `GROQ_API_KEY` | — | Tier 4 needs one. All absent means it skips and logs why |

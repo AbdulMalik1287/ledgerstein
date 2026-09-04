@@ -119,8 +119,24 @@ The API docs are at `http://localhost:8000/docs`.
 |---|---|---|
 | `PORT` | `8000` | Injected by every host above. The container binds it. |
 | `LEDGERSTEIN_DB_URL` | `sqlite:///./ledgerstein.sqlite3` | Ephemeral on free tiers — see below. |
-| `ANTHROPIC_API_KEY` | unset | Leave unset to keep tier 4 off. Set it in the host's dashboard, **never** in `render.yaml` or any committed file. |
-| `LEDGERSTEIN_MODEL` | `claude-opus-5` | Adjudicator model. |
+| `ANTHROPIC_API_KEY` | unset | Tier 4 backend, paid. |
+| `GEMINI_API_KEY` | unset | Tier 4 backend, **free, no card**. |
+| `GROQ_API_KEY` | unset | Tier 4 backend, **free, no card**. |
+
+Set **one** model key in the host's dashboard — **never** in `render.yaml` or
+any committed file — and the adjudicator runs on the deployed instance. Set
+none and it skips the ambiguous rows and records why, which is a legitimate
+state, not a broken one. `GET /api/health` reports which backends it can see.
+
+| Backend | Key | Cost | Get one |
+|---|---|---|---|
+| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
+| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `groq` | `GROQ_API_KEY` | **free tier, no card** | [console.groq.com/keys](https://console.groq.com/keys) |
+
+`auto` (the default) takes the first backend with a key set, in that order. Set
+none and the tier skips the ambiguous rows and records why — which is the safe
+default, not a failure.
 
 ### About the ephemeral disk
 

@@ -20,7 +20,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     if args.llm:
         from .recon.adjudicator import Adjudicator
 
-        adjudicator = Adjudicator(model=args.model, max_calls=args.max_llm_calls)
+        adjudicator = Adjudicator(
+            provider=args.provider,
+            model=args.model,
+            max_calls=args.max_llm_calls,
+        )
 
     result = reconcile_directory(directory, adjudicator=adjudicator)
 
@@ -69,7 +73,15 @@ def main(argv: list[str] | None = None) -> int:
     recon.add_argument(
         "--llm", action="store_true", help="let the adjudicator see the residue"
     )
-    recon.add_argument("--model", default="claude-opus-5")
+    recon.add_argument(
+        "--provider",
+        default="auto",
+        choices=["auto", "anthropic", "gemini", "groq"],
+        help="model backend; auto takes the first with a key set",
+    )
+    recon.add_argument(
+        "--model", default="", help="override the backend's default model"
+    )
     recon.add_argument("--max-llm-calls", type=int, default=25)
     recon.set_defaults(func=cmd_reconcile)
 

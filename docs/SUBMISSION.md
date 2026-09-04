@@ -38,7 +38,7 @@ trail.
 | Cost of being wrong | **₹0** across 0 false matches |
 | Throughput | ~24,000 source rows/second |
 | Exception queue | 93 rows, ₹1.17 Cr exposure — 85 correct declines, 8 genuine misses |
-| Tests | 37 passing |
+| Tests | 46 passing |
 
 The 8 misses are the point, not an embarrassment: they are payments that fit two
 open invoices from the same customer equally well, for the same amount, days
@@ -74,7 +74,7 @@ Cut summary:
 
 ## What broke, and how we got out
 
-Seven real ones, in the order they happened.
+Eight real ones, in the order they happened.
 
 ### 1. The benchmark was too easy, and it was flattering us
 
@@ -246,12 +246,39 @@ rows/second figure is the engine's own rather than borrowed from a C extension.
 engine that is off by a paisa because of binary rounding is worse than useless,
 because the error stays invisible until it is large.
 
+### 8. No Anthropic key, at an AI buildathon
+
+**Symptom.** Tier 4 was written against Anthropic and there was no key to run it
+with. The engine scored 100%/98.6% with **zero LLM calls** — defensible as
+architecture, but a tier that has never fired is hard to distinguish from one
+that does not work.
+
+**Diagnosis.** The coupling was accidental rather than necessary. Every guarantee
+that makes the tier safe to act on — the candidate whitelist, the confidence
+floor, the call budget, the audit entry — already lived *outside* the model call,
+in `adjudicator.py`. Only the twenty lines that actually spoke to Anthropic cared
+which vendor it was.
+
+**Fix.** Extracted `providers.py`. A backend now only has to turn two prompts
+into a dict; it cannot widen what the tier is allowed to believe. Anthropic keeps
+the official SDK, and Gemini and Groq were added over plain HTTP with `httpx` —
+already a dependency, and two POST requests did not justify two more SDKs in the
+image. Both have a free tier that needs no card. `auto` picks the first backend
+with a key set, and whichever answered is named in the audit trail as the actor.
+
+**Outcome.** The tier runs at ₹0. Nine new tests pin the request shape and
+response parsing for each backend against a mock transport, and the nine
+existing safety tests pass unchanged against the new injection point — which is
+the evidence that the guards really were independent of the vendor.
+
+**Lesson.** A dependency that blocks you is worth checking for necessity before
+working around it. This one turned out to be a twenty-line seam.
+
 ### Still open
 
-**Tier 4 has never made a live call.** There is no `ANTHROPIC_API_KEY` on the
-build machine, so the adjudicator has only been exercised against a stub client —
-which does cover every safety property (whitelist rejection, confidence floor,
-declines, API failure, call budget, credential absence). It degrades to a logged
-skip without a key, so the 100%/98.6% figures above are pure deterministic
-matching with zero LLM involvement. Set the key and rerun with `--llm` to
-exercise it against the 6–8 `AMBIGUOUS` rows per batch.
+**Tier 4 has not made a live call yet.** Every backend is exercised against a
+mock transport rather than the real API, so the request shapes are verified but
+the servers' acceptance of them is not. Set `GEMINI_API_KEY` or `GROQ_API_KEY`
+(both free, no card) and rerun with `--llm` to exercise it against the six
+`AMBIGUOUS` rows in `batch_b`. Without a key the tier skips and records why, so
+the 100%/98.6% figures above remain pure deterministic matching.

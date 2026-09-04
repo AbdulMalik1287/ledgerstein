@@ -108,7 +108,10 @@ class RunRequest(BaseModel):
     use_llm: bool = Field(
         default=False, description="Offer the ambiguous residue to the adjudicator"
     )
-    model: str = "claude-opus-5"
+    provider: str = Field(
+        default="auto", description="auto | anthropic | gemini | groq"
+    )
+    model: str = Field(default="", description="Override the backend's default")
     max_llm_calls: int = 25
 
 
@@ -180,7 +183,9 @@ def create_run(request: RunRequest) -> RunSummary:
         from .recon.adjudicator import Adjudicator
 
         adjudicator = Adjudicator(
-            model=request.model, max_calls=request.max_llm_calls
+            provider=request.provider,
+            model=request.model,
+            max_calls=request.max_llm_calls,
         )
 
     result = reconcile_directory(directory, adjudicator=adjudicator)
@@ -415,7 +420,16 @@ def _exception_json(row: ExceptionRow) -> dict:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "data_root": str(DATA_ROOT), "batches": len(list_batches())}
+    from .recon import providers
+
+    return {
+        "status": "ok",
+        "data_root": str(DATA_ROOT),
+        "batches": len(list_batches()),
+        # Which model backends have a key present. Empty is a valid state: the
+        # adjudicator then skips and says so rather than guessing.
+        "llm_backends": providers.available(),
+    }
 
 
 # Mounted last so every /api route above wins the match. ``html=True`` serves
