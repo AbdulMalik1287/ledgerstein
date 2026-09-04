@@ -50,9 +50,9 @@ export function exceptionTone(type: string): string {
     case "FEE_MISMATCH":
       return "bg-warn-bg text-warn";
     case "PENDING_SETTLEMENT":
-      return "bg-card-3 text-ink-2";
+      return "bg-sunk text-ink-2";
     default:
-      return "bg-brand-bg text-brand-ink";
+      return "bg-accent-soft text-ink";
   }
 }
 
@@ -61,7 +61,7 @@ export function tierTone(tier: string): string {
     case "T1_EXACT":
       return "bg-good-bg text-good";
     case "T2_DERIVED":
-      return "bg-brand-bg text-brand-ink";
+      return "bg-accent-soft text-ink";
     case "T3_INFERRED":
       return "bg-warn-bg text-warn";
     default:

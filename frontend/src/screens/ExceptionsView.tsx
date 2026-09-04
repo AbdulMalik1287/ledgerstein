@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type ExceptionItem } from "../api";
 import { count, exceptionTone, legLabel, rupees, rupeesShort } from "../format";
-import { Empty, Panel, Tag, Td, Th } from "../ui";
+import { Empty, Panel, SkeletonRows, Tag, Td, Th } from "../ui";
 
 type Summary = { exception_type: string; count: number; value_rupees: number };
 
@@ -57,7 +57,7 @@ export function ExceptionsView({ runId }: { runId: string }) {
             active ? (
               <button
                 onClick={() => setActive("")}
-                className="rounded-full border border-line bg-card px-3 py-1.5 text-[12px] text-ink-2 transition hover:bg-card-2"
+                className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] text-ink-2 transition hover:bg-raised"
               >
                 Clear filter
               </button>
@@ -75,8 +75,8 @@ export function ExceptionsView({ runId }: { runId: string }) {
                 }
                 className={`rounded-full border px-3 py-1.5 text-[12px] transition ${
                   active === group.exception_type
-                    ? "border-brand bg-brand-bg font-medium text-brand-ink"
-                    : "border-line bg-card text-ink-2 hover:bg-card-2"
+                    ? "border-accent bg-accent-soft font-medium text-ink"
+                    : "border-line bg-surface text-ink-2 hover:bg-raised"
                 }`}
               >
                 {group.exception_type}
@@ -90,7 +90,7 @@ export function ExceptionsView({ runId }: { runId: string }) {
 
           <div className="max-h-[62vh] overflow-auto">
             {loading ? (
-              <Empty>Loading…</Empty>
+              <SkeletonRows rows={8} />
             ) : shown.length === 0 ? (
               <Empty>Nothing in this bucket.</Empty>
             ) : (
@@ -108,8 +108,8 @@ export function ExceptionsView({ runId }: { runId: string }) {
                     <tr
                       key={item.id}
                       onClick={() => setSelected(item)}
-                      className={`cursor-pointer transition hover:bg-card-2/70 ${
-                        selected?.id === item.id ? "bg-card-2" : ""
+                      className={`cursor-pointer transition hover:bg-raised ${
+                        selected?.id === item.id ? "bg-raised" : ""
                       } ${item.status === "resolved" ? "opacity-45" : ""}`}
                     >
                       <Td>
@@ -117,13 +117,13 @@ export function ExceptionsView({ runId }: { runId: string }) {
                           {item.exception_type}
                         </Tag>
                       </Td>
-                      <Td className="num whitespace-nowrap text-mute">
+                      <Td className="num whitespace-nowrap text-ink-2">
                         {item.entity_id}
                       </Td>
                       <Td className="num text-right whitespace-nowrap">
                         {rupees(item.amount_rupees)}
                       </Td>
-                      <Td className="max-w-md text-xs leading-relaxed text-mute">
+                      <Td className="max-w-md text-xs leading-relaxed text-ink-2">
                         {item.reason}
                       </Td>
                     </tr>
@@ -205,12 +205,12 @@ function ExceptionDetail({
           <div className="num text-2xl font-semibold">
             {rupees(item.amount_rupees)}
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-mute">{item.reason}</p>
+          <p className="mt-2 text-sm leading-relaxed text-ink-2">{item.reason}</p>
         </div>
 
         {item.candidates.length > 0 && (
           <div>
-            <div className="text-[11px] font-semibold tracking-wide text-mute uppercase">
+            <div className="text-[11px] font-semibold tracking-wide text-ink-2 uppercase">
               Candidates considered
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -221,15 +221,15 @@ function ExceptionDetail({
                   disabled={item.status === "resolved"}
                   className={`num rounded-full border px-3 py-1.5 text-[12px] transition disabled:cursor-default ${
                     linkTo === candidate
-                      ? "border-brand bg-brand-bg text-brand-ink"
-                      : "border-line bg-card-2 text-mute hover:text-ink"
+                      ? "border-accent bg-accent-soft text-ink"
+                      : "border-line bg-raised text-ink-2 hover:text-ink"
                   }`}
                 >
                   {candidate}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-mute">
+            <p className="mt-2 text-xs leading-relaxed text-ink-2">
               The engine declined rather than picking one of these. Nothing in
               the exports separates them.
             </p>
@@ -242,7 +242,7 @@ function ExceptionDetail({
               Resolved
             </div>
             <p className="mt-1.5 text-sm text-ink">{item.resolution}</p>
-            <p className="num mt-1.5 text-xs text-mute">
+            <p className="num mt-1.5 text-xs text-ink-2">
               {item.resolved_by} · {item.resolved_at}
             </p>
           </div>
@@ -250,7 +250,7 @@ function ExceptionDetail({
           <div className="space-y-2 border-t border-line pt-4">
             <label
               htmlFor="resolution"
-              className="block text-[11px] font-semibold tracking-wide text-mute uppercase"
+              className="block text-[11px] font-semibold tracking-wide text-ink-2 uppercase"
             >
               Resolve by hand
             </label>
@@ -260,17 +260,17 @@ function ExceptionDetail({
               value={resolution}
               onChange={(event) => setResolution(event.target.value)}
               placeholder="What did you find out, and how?"
-              className="w-full rounded-[12px] border border-line bg-card-2 px-3.5 py-2.5 text-[13.5px] text-ink outline-none placeholder:text-mute focus:border-brand focus:bg-card"
+              className="w-full rounded-input border border-line bg-raised px-3.5 py-2.5 text-[13.5px] text-ink outline-none placeholder:text-ink-2 focus:border-accent focus:bg-surface"
             />
             {error && <p className="text-xs text-bad">{error}</p>}
             <button
               onClick={submit}
               disabled={busy}
-              className="w-full rounded-full bg-brand px-3 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+              className="w-full rounded-full bg-accent px-3 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
             >
               {busy ? "Recording…" : "Record decision"}
             </button>
-            <p className="text-xs leading-relaxed text-mute">
+            <p className="text-xs leading-relaxed text-ink-2">
               This is written to the audit trail as{" "}
               <span className="num">human:controller</span>, alongside the
               engine's own decisions.

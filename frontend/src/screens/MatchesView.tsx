@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type MatchItem } from "../api";
 import { count, legLabel, rupees, tierTone } from "../format";
-import { Chip, Empty, Panel, Tag, Td, Th } from "../ui";
+import { Chip, Empty, Panel, SkeletonRows, Tag, Td, Th } from "../ui";
 
 const LEGS = [
   "leg1_settlement_to_bank",
@@ -83,7 +83,7 @@ export function MatchesView({ runId }: { runId: string }) {
 
       <div className="max-h-[68vh] overflow-auto">
         {loading ? (
-          <Empty>Loading…</Empty>
+          <SkeletonRows rows={8} />
         ) : shown.length === 0 ? (
           <Empty>No matches under this filter.</Empty>
         ) : (
@@ -101,14 +101,14 @@ export function MatchesView({ runId }: { runId: string }) {
               {shown.map((item, index) => (
                 <tr
                   key={`${item.leg}-${item.left_id}-${item.right_id}-${index}`}
-                  className="hover:bg-card-2/60"
+                  className="hover:bg-raised"
                 >
                   <Td>
                     <Tag tone={tierTone(item.tier)}>{item.tier}</Tag>
                   </Td>
                   <Td className="num whitespace-nowrap">
-                    <span className="text-mute">{item.left_id}</span>
-                    <span className="mx-1.5 text-mute/50">→</span>
+                    <span className="text-ink-2">{item.left_id}</span>
+                    <span className="mx-1.5 text-ink-2/50">→</span>
                     <span className="text-ink">{item.right_id}</span>
                   </Td>
                   <Td className="num text-right whitespace-nowrap">
@@ -119,8 +119,8 @@ export function MatchesView({ runId }: { runId: string }) {
                   >
                     {item.confidence.toFixed(2)}
                   </Td>
-                  <Td className="max-w-lg text-xs leading-relaxed text-mute">
-                    <span className="num mr-1.5 text-brand-ink/80">
+                  <Td className="max-w-lg text-xs leading-relaxed text-ink-2">
+                    <span className="num mr-1.5 text-ink-2">
                       {item.rule}
                     </span>
                     {item.reason}

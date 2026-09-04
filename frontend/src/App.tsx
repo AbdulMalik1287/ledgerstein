@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type RunSummary, type Scorecard } from "./api";
 import { count } from "./format";
+import { Button } from "./ui";
 import { ScorecardView } from "./screens/ScorecardView";
 import { ExceptionsView } from "./screens/ExceptionsView";
 import { MatchesView } from "./screens/MatchesView";
@@ -9,10 +10,26 @@ import { AuditView } from "./screens/AuditView";
 type Tab = "scorecard" | "exceptions" | "matches" | "audit";
 
 const TABS: { id: Tab; label: string; blurb: string }[] = [
-  { id: "scorecard", label: "Scorecard", blurb: "Precision, recall, and what being wrong cost" },
-  { id: "exceptions", label: "Exceptions", blurb: "What the engine refused to match, worst first" },
-  { id: "matches", label: "Matches", blurb: "Every link, and the rule that made it" },
-  { id: "audit", label: "Audit trail", blurb: "Every decision in order, machine and human" },
+  {
+    id: "scorecard",
+    label: "Scorecard",
+    blurb: "Precision, recall, and what being wrong cost",
+  },
+  {
+    id: "exceptions",
+    label: "Exceptions",
+    blurb: "What the engine refused to match, worst first",
+  },
+  {
+    id: "matches",
+    label: "Matches",
+    blurb: "Every link, and the rule that made it",
+  },
+  {
+    id: "audit",
+    label: "Audit trail",
+    blurb: "Every decision in order, machine and human",
+  },
 ];
 
 export default function App() {
@@ -59,30 +76,29 @@ export default function App() {
     }
   };
 
-  const active = TABS.find((t) => t.id === tab)!;
+  const active = TABS.find((option) => option.id === tab)!;
 
   return (
     <div className="flex min-h-full">
       {/* ------------------------------------------------------- sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[236px] flex-none flex-col border-r border-line bg-card/70 px-4 py-5 lg:flex">
-        <div className="flex items-center gap-2.5 px-2">
-          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-brand-bg text-[15px]">
-            📗
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight">
+      <aside className="sticky top-0 hidden h-screen w-[228px] flex-none flex-col border-r border-line bg-raised px-3.5 py-6 lg:flex">
+        <div className="px-2.5">
+          <span className="text-[16px] font-semibold tracking-[-0.02em] text-ink">
             LedgerStein
           </span>
+          <p className="mt-0.5 text-[11.5px] text-faint">Finance controller</p>
         </div>
 
-        <nav className="mt-8 flex flex-col gap-0.5">
+        <nav className="mt-9 flex flex-col gap-0.5">
           {TABS.map((option) => (
             <button
               key={option.id}
               onClick={() => setTab(option.id)}
-              className={`label rounded-[10px] px-3 py-2.5 text-left transition ${
+              aria-current={tab === option.id ? "page" : undefined}
+              className={`rounded-input px-2.5 py-2 text-left text-[13px] ${
                 tab === option.id
-                  ? "bg-card-3 text-ink"
-                  : "text-mute hover:bg-card-2 hover:text-ink-2"
+                  ? "bg-accent-soft font-medium text-ink"
+                  : "text-ink-2 hover:bg-sunk hover:text-ink"
               }`}
             >
               {option.label}
@@ -91,56 +107,43 @@ export default function App() {
         </nav>
 
         {run && (
-          <div className="mt-auto rounded-[14px] bg-card-2 px-3.5 py-3.5">
-            <div className="label text-mute">This run</div>
-            <dl className="mt-2.5 space-y-1.5 text-[12.5px]">
-              <div className="flex justify-between gap-3">
-                <dt className="text-mute">Batch</dt>
-                <dd className="num text-ink">{run.batch}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-mute">Rows</dt>
-                <dd className="num text-ink">{count(run.rows)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-mute">Matched</dt>
-                <dd className="num text-good">{count(run.match_count)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-mute">Queued</dt>
-                <dd className="num text-warn">{count(run.exception_count)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-mute">Took</dt>
-                <dd className="num text-ink">{run.duration_seconds.toFixed(2)}s</dd>
-              </div>
-              {run.llm_calls > 0 && (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-mute">AI calls</dt>
-                  <dd className="num text-brand-ink">{run.llm_calls}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
+          <dl className="mt-auto space-y-2 border-t border-line pt-4 text-[12px]">
+            <Row label="Batch" value={run.batch} />
+            <Row label="Rows" value={count(run.rows)} />
+            <Row label="Matched" value={count(run.match_count)} tone="text-good" />
+            <Row
+              label="Queued"
+              value={count(run.exception_count)}
+              tone="text-warn"
+            />
+            <Row label="Elapsed" value={`${run.duration_seconds.toFixed(2)}s`} />
+            {run.llm_calls > 0 && (
+              <Row label="AI calls" value={count(run.llm_calls)} />
+            )}
+          </dl>
         )}
       </aside>
 
       {/* ---------------------------------------------------------- main */}
       <div className="min-w-0 flex-1">
-        <header className="border-b border-line bg-sand/80 px-5 py-4 backdrop-blur sm:px-7">
-          <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-5 gap-y-3">
+        <header className="sticky top-0 z-20 border-b border-line bg-bg/85 px-5 py-4 backdrop-blur sm:px-8">
+          <div className="mx-auto flex max-w-[1340px] flex-wrap items-center gap-x-6 gap-y-3">
             <div className="min-w-0">
-              <h1 className="text-[19px] leading-tight font-semibold tracking-tight">
+              <h1 className="text-[20px] leading-tight font-semibold tracking-[-0.022em]">
                 {active.label}
               </h1>
-              <p className="mt-0.5 text-[13px] text-mute">{active.blurb}</p>
+              <p className="mt-0.5 text-[12.5px] text-ink-2">{active.blurb}</p>
             </div>
 
             <div className="ml-auto flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="batch">
+                Batch
+              </label>
               <select
+                id="batch"
                 value={batch}
                 onChange={(event) => setBatch(event.target.value)}
-                className="num rounded-full border border-line bg-card px-3.5 py-2 text-[12.5px] text-ink outline-none"
+                className="num rounded-full border border-line bg-surface px-3.5 py-2 text-[12.5px] text-ink outline-none hover:bg-raised"
               >
                 {batches.map((option) => (
                   <option key={option.name} value={option.name}>
@@ -150,41 +153,37 @@ export default function App() {
               </select>
 
               <label
-                className={`flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-[12.5px] transition ${
+                className={`flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-[12.5px] ${
                   useLlm
-                    ? "border-brand bg-brand-bg text-brand-ink"
-                    : "border-line bg-card text-ink-2"
+                    ? "border-accent bg-accent-soft text-ink"
+                    : "border-line bg-surface text-ink-2 hover:bg-raised"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={useLlm}
                   onChange={(event) => setUseLlm(event.target.checked)}
-                  className="accent-brand"
+                  className="accent-accent"
                 />
                 Adjudicator
               </label>
 
-              <button
-                onClick={reconcile}
-                disabled={busy}
-                className="rounded-full bg-brand px-5 py-2 text-[12.5px] font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-              >
-                {busy ? "Reconciling…" : "Reconcile"}
-              </button>
+              <Button onClick={reconcile} disabled={busy}>
+                {busy ? "Reconciling" : "Reconcile"}
+              </Button>
             </div>
           </div>
 
-          {/* Tabs stay reachable when the sidebar is hidden. */}
-          <nav className="mx-auto mt-4 flex max-w-[1320px] gap-1.5 lg:hidden">
+          <nav className="mx-auto mt-4 flex max-w-[1340px] gap-1.5 lg:hidden">
             {TABS.map((option) => (
               <button
                 key={option.id}
                 onClick={() => setTab(option.id)}
-                className={`rounded-full border px-3 py-1.5 text-[12px] transition ${
+                aria-current={tab === option.id ? "page" : undefined}
+                className={`rounded-full border px-3 py-[5px] text-[12px] ${
                   tab === option.id
-                    ? "border-brand bg-brand-bg font-medium text-brand-ink"
-                    : "border-line bg-card text-ink-2"
+                    ? "border-accent bg-accent font-medium text-surface"
+                    : "border-line bg-surface text-ink-2"
                 }`}
               >
                 {option.label}
@@ -193,20 +192,25 @@ export default function App() {
           </nav>
         </header>
 
-        <main className="mx-auto max-w-[1320px] px-5 py-6 sm:px-7">
+        <main className="mx-auto max-w-[1340px] px-5 py-7 sm:px-8">
           {error && (
-            <div className="mb-5 rounded-card border border-bad/30 bg-bad-bg px-4 py-3 text-[13.5px] text-bad">
+            <div
+              role="alert"
+              className="mb-5 rounded-card border border-bad/25 bg-bad-bg px-4 py-3 text-[13px] text-bad"
+            >
               {error}
             </div>
           )}
 
           {!run ? (
-            <div className="rounded-card border border-line bg-card px-6 py-20 text-center soft-shadow">
-              <h2 className="text-[19px] font-semibold">Nothing reconciled yet</h2>
-              <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-mute">
-                Pick a batch and reconcile it. LedgerStein reads the ERP ledger,
-                the gateway exports and the bank statement, then reports what it
-                matched, what it refused to match, and why.
+            <div className="rounded-card border border-line bg-surface px-6 py-20 text-center lift">
+              <h2 className="text-[18px] font-semibold tracking-[-0.015em]">
+                Nothing reconciled yet
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-ink-2">
+                Choose a batch and reconcile it. LedgerStein reads the ERP
+                ledger, the gateway exports and the bank statement, then reports
+                what it matched, what it refused to match, and why.
               </p>
             </div>
           ) : (
@@ -215,9 +219,9 @@ export default function App() {
                 (card ? (
                   <ScorecardView card={card} />
                 ) : (
-                  <div className="rounded-card border border-line bg-card px-6 py-14 text-center text-[13.5px] leading-relaxed text-mute soft-shadow">
+                  <div className="rounded-card border border-line bg-surface px-6 py-14 text-center text-[13px] leading-relaxed text-ink-2 lift">
                     This batch shipped no ground truth, so there is nothing to
-                    score against — which is the real-world case. Work the
+                    score against. That is the real-world case. Work the
                     exception queue instead.
                   </div>
                 ))}
@@ -228,6 +232,23 @@ export default function App() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  tone = "text-ink",
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div className="flex justify-between gap-3">
+      <dt className="text-faint">{label}</dt>
+      <dd className={`num ${tone}`}>{value}</dd>
     </div>
   );
 }

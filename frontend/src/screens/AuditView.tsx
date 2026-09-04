@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type AuditItem } from "../api";
 import { count } from "../format";
-import { Empty, Panel, Tag, Td, Th } from "../ui";
+import { Empty, Panel, SkeletonRows, Tag, Td, Th } from "../ui";
 
 const ACTION_TONE: Record<string, string> = {
   match: "bg-good-bg text-good",
@@ -17,7 +17,7 @@ const ACTION_TONE: Record<string, string> = {
   reject: "bg-bad-bg text-bad",
   decline: "bg-bad-bg text-bad",
   error: "bg-bad-bg text-bad",
-  resolve: "bg-brand-bg text-brand-ink",
+  resolve: "bg-accent-soft text-ink",
 };
 
 export function AuditView({ runId }: { runId: string }) {
@@ -61,7 +61,7 @@ export function AuditView({ runId }: { runId: string }) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search a payment id, an invoice, a rule…"
-          className="num min-w-64 flex-1 rounded-full border border-line bg-card-2 px-4 py-2 text-[12.5px] text-ink outline-none placeholder:font-sans placeholder:text-mute focus:border-brand focus:bg-card"
+          className="num min-w-64 flex-1 rounded-full border border-line bg-raised px-4 py-2 text-[12.5px] text-ink outline-none placeholder:font-sans placeholder:text-ink-2 focus:border-accent focus:bg-surface"
         />
         {actions.map((option) => (
           <button
@@ -69,8 +69,8 @@ export function AuditView({ runId }: { runId: string }) {
             onClick={() => setAction(action === option ? "" : option)}
             className={`rounded-full border px-3 py-1.5 text-[12px] transition ${
               action === option
-                ? "border-brand bg-brand-bg font-medium text-brand-ink"
-                : "border-line bg-card text-ink-2 hover:bg-card-2"
+                ? "border-accent bg-accent-soft font-medium text-ink"
+                : "border-line bg-surface text-ink-2 hover:bg-raised"
             }`}
           >
             {option}
@@ -80,7 +80,7 @@ export function AuditView({ runId }: { runId: string }) {
 
       <div className="max-h-[70vh] overflow-auto">
         {loading ? (
-          <Empty>Loading…</Empty>
+          <SkeletonRows rows={9} />
         ) : shown.length === 0 ? (
           <Empty>Nothing matches that search.</Empty>
         ) : (
@@ -96,11 +96,11 @@ export function AuditView({ runId }: { runId: string }) {
             </thead>
             <tbody>
               {shown.map((item) => (
-                <tr key={item.sequence} className="hover:bg-card-2/60">
-                  <Td className="num text-right text-mute/60">
+                <tr key={item.sequence} className="hover:bg-raised">
+                  <Td className="num text-right text-faint">
                     {item.sequence}
                   </Td>
-                  <Td className="num whitespace-nowrap text-mute">
+                  <Td className="num whitespace-nowrap text-ink-2">
                     {item.actor}
                   </Td>
                   <Td>
@@ -109,10 +109,10 @@ export function AuditView({ runId }: { runId: string }) {
                     </Tag>
                   </Td>
                   <Td className="num whitespace-nowrap">{item.subject}</Td>
-                  <Td className="max-w-xl text-xs leading-relaxed text-mute">
+                  <Td className="max-w-xl text-xs leading-relaxed text-ink-2">
                     {item.detail}
                     {item.confidence > 0 && (
-                      <span className="num ml-1.5 text-mute/60">
+                      <span className="num ml-1.5 text-faint">
                         ({item.confidence.toFixed(2)})
                       </span>
                     )}
