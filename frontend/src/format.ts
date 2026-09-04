@@ -68,3 +68,32 @@ export function tierTone(tier: string): string {
       return "bg-bad-bg text-bad";
   }
 }
+
+/**
+ * Round a set of shares to whole percentages that sum to exactly 100.
+ *
+ * Rounding each share on its own is the obvious approach and it is wrong: three
+ * thirds round to 33 each and display as 99. Largest remainder gives the spare
+ * points to whichever values were rounded down hardest, which is both correct
+ * and stable between renders.
+ */
+export function wholePercentShares(values: number[]): number[] {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return values.map(() => 0);
+
+  const exact = values.map((value) => (value / total) * 100);
+  const floors = exact.map(Math.floor);
+  let remaining = 100 - floors.reduce((sum, value) => sum + value, 0);
+
+  const order = exact
+    .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+    .sort((a, b) => b.remainder - a.remainder);
+
+  const out = [...floors];
+  for (const { index } of order) {
+    if (remaining <= 0) break;
+    out[index] += 1;
+    remaining -= 1;
+  }
+  return out;
+}

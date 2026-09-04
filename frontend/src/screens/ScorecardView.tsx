@@ -7,13 +7,23 @@
  */
 
 import type { Scorecard } from "../api";
-import { count, legLabel, percent, rupees, rupeesShort } from "../format";
+import {
+  count,
+  legLabel,
+  percent,
+  rupees,
+  rupeesShort,
+  wholePercentShares,
+} from "../format";
 import { Meter, Panel, Stat, Tag, Td, Th } from "../ui";
 import { tierTone } from "../format";
 
 export function ScorecardView({ card }: { card: Scorecard }) {
   const { overall } = card;
   const clean = overall.wrong === 0;
+
+  const tiers = Object.entries(card.tier_scores);
+  const shares = wholePercentShares(tiers.map(([, stats]) => stats.predicted));
 
   return (
     <div className="space-y-4">
@@ -142,17 +152,14 @@ export function ScorecardView({ card }: { card: Scorecard }) {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(card.tier_scores).map(([tier, stats]) => (
+                {tiers.map(([tier, stats], index) => (
                   <tr key={tier} className="hover:bg-raised">
                     <Td>
                       <Tag tone={tierTone(tier)}>{tier}</Tag>
                     </Td>
                     <Td className="num text-right">{count(stats.predicted)}</Td>
                     <Td className="num text-right text-ink-2">
-                      {percent(
-                        overall.predicted ? stats.predicted / overall.predicted : 0,
-                        0,
-                      )}
+                      {shares[index]}%
                     </Td>
                     <Td
                       className={`num text-right ${stats.precision === 1 ? "text-good" : "text-warn"}`}
