@@ -18,7 +18,7 @@ cd backend && python -m app.cli reconcile ../data/generated/batch_b
 | Recall | 98.6% |
 | Cost of false matches | ₹0 |
 | Exception queue | 93 rows, ₹1.17 Cr exposure |
-| Tests | 52 |
+| Tests | 56 |
 
 ---
 
@@ -210,18 +210,25 @@ backend in `providers.py` only has to turn a system prompt and a user prompt
 into a dict; it cannot widen what the tier is allowed to believe. That is what
 makes swapping one for another cheap and safe.
 
-| Backend | Key | Cost | Get one |
+| Backend | Credential | Cost | Get one |
 |---|---|---|---|
-| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
-| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | `groq` | `GROQ_API_KEY` | **free tier, no card** | [console.groq.com/keys](https://console.groq.com/keys) |
+| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — must start `AIza`; the short-lived `AQ.…` tokens expire within the hour |
+| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
+| `ollama` | **none** | free, local | [ollama.com](https://ollama.com) then `ollama pull qwen3:4b` |
 
-`auto` (the default) takes the first backend with a key set, in that order. Set
-none and the tier skips the ambiguous rows and records why — which is the safe
-default, not a failure.
+`auto` prefers a hosted backend when its key is set, and falls back to a local
+Ollama server if one is answering. With nothing available the tier skips the
+ambiguous rows and records why — the safe default, not a failure.
 
-Anthropic uses the official SDK with a Pydantic `Verdict` schema. Gemini and
-Groq are reached over plain HTTP with `httpx` — already a dependency, and two
+Ollama is there because every hosted free tier eventually says no: keys expire
+mid-session, quotas exhaust after a couple of dozen calls, and a demo that
+depends on someone else's rate limiter can fail while it is being watched. A
+local model has no key, no quota and no network. It is preferred last because it
+is usually the weakest model on offer.
+
+Anthropic uses the official SDK with a Pydantic `Verdict` schema. Gemini, Groq
+and Ollama are reached over plain HTTP with `httpx` — already a dependency, and two
 POST requests did not justify two more SDKs in the image. Both are pinned to
 `temperature: 0` and structured-output mode, so a verdict does not vary between
 identical runs.
@@ -418,7 +425,7 @@ python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000/docs
 cd ../frontend && npm install && npm run dev # http://localhost:5173
 
 # Tests
-cd backend && python -m pytest               # 52 passing
+cd backend && python -m pytest               # 56 passing
 ```
 
 Seventeen tests cover generator invariants — settlement arithmetic closing to

@@ -38,7 +38,7 @@ trail.
 | Cost of being wrong | **₹0** across 0 false matches |
 | Throughput | ~24,000 source rows/second |
 | Exception queue | 93 rows, ₹1.17 Cr exposure — 85 correct declines, 8 genuine misses |
-| Tests | 52 passing |
+| Tests | 56 passing |
 
 The 8 misses are the point, not an embarrassment: they are payments that fit two
 open invoices from the same customer equally well, for the same amount, days

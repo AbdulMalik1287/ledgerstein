@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     recon.add_argument(
         "--provider",
         default="auto",
-        choices=["auto", "anthropic", "gemini", "groq"],
+        choices=["auto", "anthropic", "gemini", "groq", "ollama"],
         help="model backend; auto takes the first with a key set",
     )
     recon.add_argument(

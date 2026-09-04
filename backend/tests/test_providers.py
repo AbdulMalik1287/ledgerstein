@@ -19,7 +19,7 @@ import httpx
 import pytest
 
 from app.recon import providers
-from app.recon.providers import GeminiProvider, GroqProvider
+from app.recon.providers import GeminiProvider, GroqProvider, OllamaProvider
 
 VERDICT = {
     "decision": "match",
@@ -216,3 +216,73 @@ def test_a_client_error_is_not_retried(monkeypatch):
     with pytest.raises(RuntimeError, match="401"):
         GroqProvider(api_key="k", transport=transport).complete("s", "p")
     assert attempts["n"] == 1
+
+
+# ------------------------------------------------------------------ ollama
+
+
+def _ollama_response(text: str) -> dict:
+    return {"message": {"content": text}}
+
+
+def test_ollama_sends_the_documented_shape():
+    transport, seen = capture(_ollama_response(json.dumps(VERDICT)))
+    provider = OllamaProvider(host="http://localhost:11434", transport=transport)
+
+    assert provider.complete("SYSTEM", "PROMPT") == VERDICT
+
+    assert seen["url"] == "http://localhost:11434/api/chat"
+    body = seen["body"]
+    assert body["model"] == provider.model
+    assert body["stream"] is False
+    assert body["options"]["temperature"] == 0
+    assert body["messages"][0] == {"role": "system", "content": "SYSTEM"}
+    assert body["messages"][1]["content"].startswith("PROMPT")
+
+    # Ollama takes a JSON schema directly, so structured output is enforced by
+    # the server rather than hoped for in the prompt.
+    schema = body["format"]
+    assert schema["type"] == "object"
+    assert set(schema["required"]) == {
+        "decision",
+        "invoice_no",
+        "reason",
+        "confidence",
+    }
+
+
+def test_ollama_honours_host_and_model_env(monkeypatch):
+    monkeypatch.setenv("OLLAMA_HOST", "http://box:9999/")
+    monkeypatch.setenv("OLLAMA_MODEL", "llama3.2:3b")
+
+    provider = OllamaProvider()
+    assert provider.host == "http://box:9999"
+    assert provider.model == "llama3.2:3b"
+
+
+def test_ollama_is_selected_only_when_it_answers(monkeypatch):
+    for key in providers.ENV_KEYS.values():
+        monkeypatch.delenv(key, raising=False)
+
+    # A local backend has no key to check, so reachability is the only honest
+    # test of whether it can be used.
+    monkeypatch.setattr(OllamaProvider, "is_reachable", classmethod(lambda cls, host="": False))
+    backend, reason = providers.build("auto")
+    assert backend is None
+    assert "Ollama" in reason
+
+    monkeypatch.setattr(OllamaProvider, "is_reachable", classmethod(lambda cls, host="": True))
+    backend, _ = providers.build("auto")
+    assert backend is not None and backend.name == "ollama"
+    assert providers.available() == ["ollama"]
+
+
+def test_a_hosted_key_outranks_a_running_ollama(monkeypatch):
+    """Ollama is the fallback, not the preference -- it is usually the weakest
+    model on offer, so it only wins when nothing else is configured."""
+    for key in providers.ENV_KEYS.values():
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr(OllamaProvider, "is_reachable", classmethod(lambda cls, host="": True))
+    monkeypatch.setenv("GROQ_API_KEY", "g")
+
+    assert providers.build("auto")[0].name == "groq"

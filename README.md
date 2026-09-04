@@ -185,7 +185,7 @@ python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000/docs
 cd ../frontend && npm install && npm run dev # http://localhost:5173
 ```
 
-Tests: `cd backend && python -m pytest` — 52 passing, covering generator
+Tests: `cd backend && python -m pytest` — 56 passing, covering generator
 invariants, the adjudicator's safety properties, the model backends, and the
 API end to end.
 

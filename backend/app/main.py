@@ -109,7 +109,7 @@ class RunRequest(BaseModel):
         default=False, description="Offer the ambiguous residue to the adjudicator"
     )
     provider: str = Field(
-        default="auto", description="auto | anthropic | gemini | groq"
+        default="auto", description="auto | anthropic | gemini | groq | ollama"
     )
     model: str = Field(default="", description="Override the backend's default")
     max_llm_calls: int = 25

@@ -128,15 +128,22 @@ any committed file — and the adjudicator runs on the deployed instance. Set
 none and it skips the ambiguous rows and records why, which is a legitimate
 state, not a broken one. `GET /api/health` reports which backends it can see.
 
-| Backend | Key | Cost | Get one |
+| Backend | Credential | Cost | Get one |
 |---|---|---|---|
-| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
-| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | `groq` | `GROQ_API_KEY` | **free tier, no card** | [console.groq.com/keys](https://console.groq.com/keys) |
+| `gemini` | `GEMINI_API_KEY` | **free tier, no card** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — must start `AIza`; the short-lived `AQ.…` tokens expire within the hour |
+| `anthropic` | `ANTHROPIC_API_KEY` | paid | [console.anthropic.com](https://console.anthropic.com) |
+| `ollama` | **none** | free, local | [ollama.com](https://ollama.com) then `ollama pull qwen3:4b` |
 
-`auto` (the default) takes the first backend with a key set, in that order. Set
-none and the tier skips the ambiguous rows and records why — which is the safe
-default, not a failure.
+`auto` prefers a hosted backend when its key is set, and falls back to a local
+Ollama server if one is answering. With nothing available the tier skips the
+ambiguous rows and records why — the safe default, not a failure.
+
+Ollama is there because every hosted free tier eventually says no: keys expire
+mid-session, quotas exhaust after a couple of dozen calls, and a demo that
+depends on someone else's rate limiter can fail while it is being watched. A
+local model has no key, no quota and no network. It is preferred last because it
+is usually the weakest model on offer.
 
 ### About the ephemeral disk
 
