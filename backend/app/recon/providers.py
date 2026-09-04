@@ -54,7 +54,10 @@ JSON_ONLY_SUFFIX = """
 Reply with JSON only, no prose and no code fence, in exactly this shape:
 {"decision": "match" | "decline", "invoice_no": "<exact id from the list, or empty string>", "reason": "<one sentence>", "confidence": <number between 0 and 1>}"""
 
-HTTP_TIMEOUT_SECONDS = 45.0
+HTTP_TIMEOUT_SECONDS = 120.0
+"""Generous on purpose. Current reasoning models spend real time on a judgement
+call, and a timeout here is not a free failure -- it drops a row back into the
+queue that the tier was asked to decide."""
 
 
 class Provider(Protocol):
@@ -104,7 +107,7 @@ class GeminiProvider:
     """Google's free tier. No card required, which is why it is here."""
 
     name = "gemini"
-    default_model = "gemini-2.0-flash"
+    default_model = "gemini-3.6-flash"
     endpoint = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 
     def __init__(self, model: str = "", api_key: str = "", transport=None) -> None:
@@ -187,21 +190,54 @@ class GroqProvider:
 # ----------------------------------------------------------------- plumbing
 
 
+RETRYABLE_STATUS = (429, 500, 502, 503, 504)
+MAX_ATTEMPTS = 3
+
+
 def _post(url: str, headers: dict, body: dict, transport=None) -> dict:
+    """POST with a short bounded retry on transient failures.
+
+    Free tiers return 503 under load often enough that a single attempt loses
+    rows the tier was asked to decide. Retries are capped at three and only
+    cover statuses that mean "try again" -- a 400 or a 401 is a fact, not a
+    blip, and retrying it just burns the clock.
+    """
+    import time
+
     import httpx
 
+    host = url.split("/")[2]
+    last = ""
     with httpx.Client(timeout=HTTP_TIMEOUT_SECONDS, transport=transport) as client:
-        response = client.post(
-            url, headers={"Content-Type": "application/json", **headers}, json=body
-        )
-        if response.status_code >= 400:
-            # Trimmed: provider error bodies can be long, and the useful part is
+        for attempt in range(MAX_ATTEMPTS):
+            try:
+                response = client.post(
+                    url,
+                    headers={"Content-Type": "application/json", **headers},
+                    json=body,
+                )
+            except httpx.TimeoutException as error:
+                last = "timed out (%s)" % type(error).__name__
+                if attempt == MAX_ATTEMPTS - 1:
+                    break
+                time.sleep(2**attempt)
+                continue
+
+            if response.status_code < 400:
+                return response.json()
+
+            # Trimmed: provider error bodies can be long and the useful part is
             # always at the front. The full text never reaches the audit trail.
-            raise RuntimeError(
-                "%s returned %d: %s"
-                % (url.split("/")[2], response.status_code, response.text[:300])
+            last = "returned %d: %s" % (
+                response.status_code,
+                " ".join(response.text[:200].split()),
             )
-        return response.json()
+            if response.status_code not in RETRYABLE_STATUS:
+                break
+            if attempt < MAX_ATTEMPTS - 1:
+                time.sleep(2**attempt)
+
+    raise RuntimeError("%s %s" % (host, last))
 
 
 PROVIDERS: dict[str, type] = {

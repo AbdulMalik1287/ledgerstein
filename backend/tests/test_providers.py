@@ -80,8 +80,8 @@ def test_gemini_sends_the_documented_shape():
 
 
 def test_gemini_surfaces_an_error_status():
-    transport, _ = capture({"error": {"message": "quota"}}, status=429)
-    with pytest.raises(RuntimeError, match="429"):
+    transport, _ = capture({"error": {"message": "bad request"}}, status=400)
+    with pytest.raises(RuntimeError, match="400"):
         GeminiProvider(api_key="k", transport=transport).complete("s", "p")
 
 
@@ -170,3 +170,49 @@ def test_a_model_override_reaches_the_provider(monkeypatch):
 
     backend, _ = providers.build("gemini", model="gemini-2.5-flash")
     assert backend.model == "gemini-2.5-flash"
+
+
+# ----------------------------------------------------------------- retries
+
+
+def counting_transport(statuses: list[int], payload: dict):
+    """Replays a sequence of statuses, recording how many attempts were made."""
+    attempts = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        status = statuses[min(attempts["n"], len(statuses) - 1)]
+        attempts["n"] += 1
+        return httpx.Response(status, json=payload)
+
+    return httpx.MockTransport(handler), attempts
+
+
+def test_a_transient_503_is_retried_and_can_succeed(monkeypatch):
+    """Free tiers return 503 under load. One attempt loses the row."""
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    transport, attempts = counting_transport(
+        [503, 200], _gemini_response(json.dumps(VERDICT))
+    )
+    provider = GeminiProvider(api_key="k", transport=transport)
+
+    assert provider.complete("s", "p") == VERDICT
+    assert attempts["n"] == 2
+
+
+def test_retries_are_bounded(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    transport, attempts = counting_transport([503], {"error": "down"})
+
+    with pytest.raises(RuntimeError, match="503"):
+        GeminiProvider(api_key="k", transport=transport).complete("s", "p")
+    assert attempts["n"] == providers.MAX_ATTEMPTS
+
+
+def test_a_client_error_is_not_retried(monkeypatch):
+    """A 401 is a fact, not a blip. Retrying it only burns the clock."""
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    transport, attempts = counting_transport([401], {"error": "bad key"})
+
+    with pytest.raises(RuntimeError, match="401"):
+        GroqProvider(api_key="k", transport=transport).complete("s", "p")
+    assert attempts["n"] == 1

@@ -38,7 +38,7 @@ trail.
 | Cost of being wrong | **₹0** across 0 false matches |
 | Throughput | ~24,000 source rows/second |
 | Exception queue | 93 rows, ₹1.17 Cr exposure — 85 correct declines, 8 genuine misses |
-| Tests | 46 passing |
+| Tests | 52 passing |
 
 The 8 misses are the point, not an embarrassment: they are payments that fit two
 open invoices from the same customer equally well, for the same amount, days
@@ -74,7 +74,7 @@ Cut summary:
 
 ## What broke, and how we got out
 
-Eight real ones, in the order they happened.
+Nine real ones, in the order they happened.
 
 ### 1. The benchmark was too easy, and it was flattering us
 
@@ -274,11 +274,62 @@ the evidence that the guards really were independent of the vendor.
 **Lesson.** A dependency that blocks you is worth checking for necessity before
 working around it. This one turned out to be a twenty-line seam.
 
+### 9. The AI tier's first live run made things worse
+
+**Symptom.** With a real Gemini key wired in, tier 4 ran against the six
+`AMBIGUOUS` rows in `batch_b` and produced **one match — a wrong one**.
+Precision fell from 100% to 99.5% and ₹1,16,517 moved into the false-match
+column. The tier that exists to protect precision had just cost it.
+
+**Diagnosis.** The audit trail said exactly why, in the model's own words:
+
+> *"INV-2026-9265 is the only open invoice for Quartz Logistics Pvt Ltd matching
+> the exact amount of 116,517.00, as INV-2026-0030 is already marked paid."*
+
+It reasoned from `erp_status`. That field is **deliberately stale** — the
+generator seeds invoices whose ledger status disagrees with reality, because
+that disagreement is the whole reason a three-way match beats trusting any
+single system. The deterministic rules never touch it. And the system prompt,
+written before any of this ran, had told the model in as many words to weigh
+*"whether the ERP already marks one as paid"*.
+
+So the failure was not the model's judgement. It was ours: we handed it the one
+field we already knew was untrustworthy and asked it to reason from it.
+
+**Fix.** Two prompt rules. `erp_status` is explicitly named as not evidence —
+"that disagreement is what this engine exists to find" — and candidates
+differing only by identifier and a day or two of dates are declared
+indistinguishable, with an instruction to decline rather than reach for a
+tie-breaker that thin.
+
+**Outcome.** Re-run: **four clean declines, zero matches, precision back to
+100%, ₹0 wrong.** The model's reasons read like a controller's: *"the candidate
+invoices share the same customer, amount, and PO reference, differing by only
+one day in issue date."* Recall stayed 98.6% — the tier does not improve it,
+because those rows genuinely cannot be improved. That is the correct outcome and
+the clearest evidence for the whole design: on undecidable rows the right answer
+is to decline, and the value of the tier is that it declines *for a stated
+reason* instead of leaving a bare "unmatched".
+
+**Lesson.** A prompt is part of the system under test. Ours embedded a
+domain assumption the rest of the codebase had already rejected, and only a live
+run surfaced it.
+
+**Also found, operationally.** `gemini-2.0-flash` is retired — the API replies
+with the model to use instead, and the default moved to `gemini-3.6-flash`.
+The free tier returns 503s under load and 429s after roughly two dozen calls in
+a few minutes, so `_post` gained a bounded retry: three attempts with
+exponential backoff, only on 429 and 5xx, because a 401 is a fact rather than a
+blip. Six rows take about 85 seconds wall-clock — worth knowing before demoing
+it live.
+
 ### Still open
 
-**Tier 4 has not made a live call yet.** Every backend is exercised against a
-mock transport rather than the real API, so the request shapes are verified but
-the servers' acceptance of them is not. Set `GEMINI_API_KEY` or `GROQ_API_KEY`
-(both free, no card) and rerun with `--llm` to exercise it against the six
-`AMBIGUOUS` rows in `batch_b`. Without a key the tier skips and records why, so
-the 100%/98.6% figures above remain pure deterministic matching.
+**Groq has not been exercised against its real API.** Gemini is now verified end to end against
+the live API; Groq's request shape is only checked against a mock transport, so
+its server's acceptance of it is unconfirmed. Set `GROQ_API_KEY` and run with
+`--provider groq` to close that.
+
+The headline 100%/98.6% figures are **pure deterministic matching** — the tier
+adds no matches on this batch, by design, because every row it sees is
+undecidable.

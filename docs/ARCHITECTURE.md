@@ -18,7 +18,7 @@ cd backend && python -m app.cli reconcile ../data/generated/batch_b
 | Recall | 98.6% |
 | Cost of false matches | ₹0 |
 | Exception queue | 93 rows, ₹1.17 Cr exposure |
-| Tests | 46 |
+| Tests | 52 |
 
 ---
 
@@ -227,8 +227,28 @@ POST requests did not justify two more SDKs in the image. Both are pinned to
 identical runs.
 
 Whichever answered is named in the audit trail as the actor, e.g.
-`llm:gemini/gemini-2.0-flash`, so a run is always traceable to the model that
+`llm:gemini/gemini-3.6-flash`, so a run is always traceable to the model that
 made its calls. Override the model per backend with `--model`.
+
+`_post` retries three times with exponential backoff on 429 and 5xx only — free
+tiers return 503 under load often enough that a single attempt loses rows the
+tier was asked to decide, while a 401 is a fact rather than a blip and retrying
+it just burns the clock.
+
+### What the tier does on this batch
+
+Verified live against Gemini on `batch_b`: six ambiguous rows, **four declines,
+zero matches, precision unchanged at 100%**. It adds no recall, and that is the
+correct result — every row it sees is undecidable by construction. The value is
+that each one now carries a stated reason a controller can read:
+
+> *"The candidate invoices share the same customer, amount, and PO reference,
+> differing by only one day in issue date."*
+
+Six rows cost about 85 seconds wall-clock. The prompt explicitly forbids
+reasoning from `erp_status`, which the generator seeds as deliberately stale —
+an earlier version omitted that and the model produced one confident wrong match
+worth ₹1,16,517. See `docs/SUBMISSION.md` §9.
 
 ## 8. How it is scored
 
@@ -398,13 +418,13 @@ python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000/docs
 cd ../frontend && npm install && npm run dev # http://localhost:5173
 
 # Tests
-cd backend && python -m pytest               # 46 passing
+cd backend && python -m pytest               # 52 passing
 ```
 
 Seventeen tests cover generator invariants — settlement arithmetic closing to
 the paisa, the statement balance running as a true total, nothing unmatchable by
-construction. Nine cover the adjudicator's safety properties and nine more the
-model backends' request and response wiring. Eleven exercise the API end to end
+construction. Nine cover the adjudicator's safety properties and fifteen more the model
+backends' request wiring, response parsing and retry behaviour. Eleven exercise the API end to end
 against the real engine.
 
 ### Configuration

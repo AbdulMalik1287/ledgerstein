@@ -216,16 +216,26 @@ them:
 > The generator writes the answer key. The engine never reads it — only the
 > scorecard does.
 >
-> There is an AI tier, and it never fired here. It only sees rows the rules
-> refused, it's handed a whitelist of candidates it must choose from, and it's
-> allowed to say no. A hallucinated invoice number gets rejected into the queue,
-> not written into the ledger. That's enforced in code after the call, and
-> there's a test that proves it.
+> And the AI tier only sees what the rules refused. On this batch it looked at
+> six rows and declined four of them — 'same customer, same amount, same PO
+> reference, one day apart.' It added nothing to recall, which is the right
+> answer, because those rows genuinely cannot be decided.
+>
+> The first time I ran it live, it did make a match. A wrong one, worth one lakh
+> sixteen thousand. It had reasoned from the ERP's paid flag — a field this
+> whole system exists to distrust, and which my own prompt had told it to use.
+> That's fixed, and it's in the write-up.
 >
 > Precision first. Costs in rupees. An honest exception list. That's
 > LedgerStein."
 
-*(112 words)*
+*(165 words)*
+
+> **If you have a key in the demo:** tick **Adjudicator** before hitting
+> Reconcile in Beat 2, and the audit trail in Beat 5 will carry
+> `llm:gemini/gemini-3.6-flash` decline lines you can point at. Budget ~85s for
+> six rows, so start the run before you begin talking. Without a key the tier
+> logs a skip and everything else is unchanged.
 
 ---
 
@@ -243,6 +253,7 @@ Tape this next to your monitor.
 | 2:58 | **Audit trail tab** | Search `pay_p8aqc68xw55ck7`, then `merged_payout` |
 | 3:32 | **Exceptions tab** | Filter `CROSSED_REFERENCE`, open `pay_ii53kddqi6a1cy` |
 | 4:22 | **Terminal** | Run the CLI scorecard, hold on the output |
+| — | *(optional)* | With a key: `--llm` shows the four declines live |
 
 ---
 

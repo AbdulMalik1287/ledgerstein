@@ -50,13 +50,19 @@ Rules you must follow:
 2. Decline whenever the candidates are genuinely indistinguishable on the \
    evidence given. A declined row goes to a human, which is a good outcome. A \
    wrong match closes a book, which is an expensive one.
-3. Weigh real signals only: how long an invoice has been outstanding, whether \
-   the ERP already marks one as paid, purchase order references, and the gap \
-   between issue date and capture date. Customers usually clear the oldest \
-   open invoice first, but that is a tendency and not a rule.
-4. Your confidence must reflect how much the evidence actually separates the \
+3. Weigh real signals only: how long an invoice has been outstanding, purchase \
+   order references, and the gap between issue date and capture date. \
+   Customers usually clear the oldest open invoice first, but that is a \
+   tendency and not a rule.
+4. Do not reason from erp_status. The ledger is routinely stale -- an invoice \
+   marked paid may be unpaid, and one marked open may already be settled. That \
+   disagreement is what this engine exists to find. It is not evidence.
+5. Candidates that differ only by identifier and by a day or two of dates are \
+   indistinguishable. Decline them. Reaching for a tie-breaker that thin is \
+   how a wrong match gets made.
+6. Your confidence must reflect how much the evidence actually separates the \
    candidates. If one is only slightly more likely, say 0.6, not 0.9.
-5. Your reason is read by a finance controller. One sentence, concrete, naming \
+7. Your reason is read by a finance controller. One sentence, concrete, naming \
    the signal you used."""
 
 
