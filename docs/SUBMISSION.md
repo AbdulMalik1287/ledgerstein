@@ -53,10 +53,11 @@ Full functionality and architecture reference: [`docs/ARCHITECTURE.md`](ARCHITEC
 
 ## 5-minute pitch video
 
-> **Not yet recorded.** Record, upload unlisted, and replace this line with the URL.
+**https://youtu.be/EaOqJAiIKfo**
 
-Word-for-word script, screen-by-screen directions, a pre-flight checklist and the
-exact rows to point at: **[docs/PITCH_SCRIPT.md](PITCH_SCRIPT.md)**.
+Recorded against the live deployment, eight takes cut together. Word-for-word
+script, screen directions and the exact rows pointed at:
+**[docs/PITCH_SCRIPT.md](PITCH_SCRIPT.md)**.
 
 Cut summary:
 

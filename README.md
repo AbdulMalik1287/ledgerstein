@@ -5,6 +5,8 @@
 
 **Razorpay AI Buildathon — Track 04: AI Finance Controller**
 
+**[Live demo](https://ledgerstein.onrender.com)** · **[5-minute walkthrough](https://youtu.be/EaOqJAiIKfo)**
+
 ---
 
 ## Result
