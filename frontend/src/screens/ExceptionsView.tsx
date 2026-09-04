@@ -57,14 +57,14 @@ export function ExceptionsView({ runId }: { runId: string }) {
             active ? (
               <button
                 onClick={() => setActive("")}
-                className="rounded border border-line bg-ink-600 px-2 py-1 text-xs text-mute transition hover:text-bright"
+                className="rounded-full border border-line bg-card px-3 py-1.5 text-[12px] text-ink-2 transition hover:bg-card-2"
               >
                 Clear filter
               </button>
             ) : null
           }
         >
-          <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-3">
+          <div className="flex flex-wrap gap-2 border-b border-line px-5 pb-4">
             {summary.map((group) => (
               <button
                 key={group.exception_type}
@@ -73,14 +73,14 @@ export function ExceptionsView({ runId }: { runId: string }) {
                     active === group.exception_type ? "" : group.exception_type,
                   )
                 }
-                className={`rounded border px-2 py-1 text-[11px] transition ${
+                className={`rounded-full border px-3 py-1.5 text-[12px] transition ${
                   active === group.exception_type
-                    ? "border-accent bg-accent/15 text-accent"
-                    : "border-line bg-ink-700 text-mute hover:border-line hover:text-bright"
+                    ? "border-brand bg-brand-bg font-medium text-brand-ink"
+                    : "border-line bg-card text-ink-2 hover:bg-card-2"
                 }`}
               >
                 {group.exception_type}
-                <span className="num ml-1.5 text-bright">{group.count}</span>
+                <span className="num ml-1.5 text-ink">{group.count}</span>
                 <span className="num ml-1.5 opacity-60">
                   {rupeesShort(group.value_rupees)}
                 </span>
@@ -108,8 +108,8 @@ export function ExceptionsView({ runId }: { runId: string }) {
                     <tr
                       key={item.id}
                       onClick={() => setSelected(item)}
-                      className={`cursor-pointer transition hover:bg-ink-700/60 ${
-                        selected?.id === item.id ? "bg-ink-700" : ""
+                      className={`cursor-pointer transition hover:bg-card-2/70 ${
+                        selected?.id === item.id ? "bg-card-2" : ""
                       } ${item.status === "resolved" ? "opacity-45" : ""}`}
                     >
                       <Td>
@@ -219,10 +219,10 @@ function ExceptionDetail({
                   key={candidate}
                   onClick={() => setLinkTo(candidate)}
                   disabled={item.status === "resolved"}
-                  className={`num rounded border px-2 py-1 text-xs transition disabled:cursor-default ${
+                  className={`num rounded-full border px-3 py-1.5 text-[12px] transition disabled:cursor-default ${
                     linkTo === candidate
-                      ? "border-accent bg-accent/15 text-accent"
-                      : "border-line bg-ink-700 text-mute hover:text-bright"
+                      ? "border-brand bg-brand-bg text-brand-ink"
+                      : "border-line bg-card-2 text-mute hover:text-ink"
                   }`}
                 >
                   {candidate}
@@ -237,11 +237,11 @@ function ExceptionDetail({
         )}
 
         {item.status === "resolved" ? (
-          <div className="rounded border border-good/30 bg-good/10 px-3 py-3">
+          <div className="rounded border border-good/25 bg-good-bg px-3 py-3">
             <div className="text-xs font-semibold tracking-wide text-good uppercase">
               Resolved
             </div>
-            <p className="mt-1.5 text-sm text-bright">{item.resolution}</p>
+            <p className="mt-1.5 text-sm text-ink">{item.resolution}</p>
             <p className="num mt-1.5 text-xs text-mute">
               {item.resolved_by} · {item.resolved_at}
             </p>
@@ -260,13 +260,13 @@ function ExceptionDetail({
               value={resolution}
               onChange={(event) => setResolution(event.target.value)}
               placeholder="What did you find out, and how?"
-              className="w-full rounded border border-line bg-ink-900 px-3 py-2 text-sm text-bright outline-none placeholder:text-mute/60 focus:border-accent"
+              className="w-full rounded-[12px] border border-line bg-card-2 px-3.5 py-2.5 text-[13.5px] text-ink outline-none placeholder:text-mute focus:border-brand focus:bg-card"
             />
             {error && <p className="text-xs text-bad">{error}</p>}
             <button
               onClick={submit}
               disabled={busy}
-              className="w-full rounded bg-accent px-3 py-2 text-sm font-semibold text-ink-900 transition hover:brightness-110 disabled:opacity-50"
+              className="w-full rounded-full bg-brand px-3 py-2.5 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
             >
               {busy ? "Recording…" : "Record decision"}
             </button>

@@ -43,28 +43,28 @@ export function exceptionTone(type: string): string {
     case "MISSING_CREDIT":
     case "CHARGEBACK_DEBIT":
     case "DUPLICATE_CREDIT":
-      return "text-bad border-bad/30 bg-bad/10";
+      return "bg-bad-bg text-bad";
     case "AMBIGUOUS":
     case "CROSSED_REFERENCE":
     case "VALUE_VARIANCE":
     case "FEE_MISMATCH":
-      return "text-warn border-warn/30 bg-warn/10";
+      return "bg-warn-bg text-warn";
     case "PENDING_SETTLEMENT":
-      return "text-mute border-line bg-ink-600/60";
+      return "bg-card-3 text-ink-2";
     default:
-      return "text-accent border-accent/30 bg-accent/10";
+      return "bg-brand-bg text-brand-ink";
   }
 }
 
 export function tierTone(tier: string): string {
   switch (tier) {
     case "T1_EXACT":
-      return "text-good border-good/30 bg-good/10";
+      return "bg-good-bg text-good";
     case "T2_DERIVED":
-      return "text-accent border-accent/30 bg-accent/10";
+      return "bg-brand-bg text-brand-ink";
     case "T3_INFERRED":
-      return "text-warn border-warn/30 bg-warn/10";
+      return "bg-warn-bg text-warn";
     default:
-      return "text-bad border-bad/30 bg-bad/10";
+      return "bg-bad-bg text-bad";
   }
 }

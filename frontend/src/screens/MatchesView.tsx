@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type MatchItem } from "../api";
 import { count, legLabel, rupees, tierTone } from "../format";
-import { Empty, Panel, Tag, Td, Th } from "../ui";
+import { Chip, Empty, Panel, Tag, Td, Th } from "../ui";
 
 const LEGS = [
   "leg1_settlement_to_bank",
@@ -53,7 +53,7 @@ export function MatchesView({ runId }: { runId: string }) {
       title="Matches"
       subtitle={`${count(shown.length)} of ${count(items.length)} · ${rupees(value)} reconciled`}
     >
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 pb-4">
         <Chip active={!leg} onClick={() => setLeg("")}>
           All legs
         </Chip>
@@ -101,7 +101,7 @@ export function MatchesView({ runId }: { runId: string }) {
               {shown.map((item, index) => (
                 <tr
                   key={`${item.leg}-${item.left_id}-${item.right_id}-${index}`}
-                  className="hover:bg-ink-700/50"
+                  className="hover:bg-card-2/60"
                 >
                   <Td>
                     <Tag tone={tierTone(item.tier)}>{item.tier}</Tag>
@@ -109,7 +109,7 @@ export function MatchesView({ runId }: { runId: string }) {
                   <Td className="num whitespace-nowrap">
                     <span className="text-mute">{item.left_id}</span>
                     <span className="mx-1.5 text-mute/50">→</span>
-                    <span className="text-bright">{item.right_id}</span>
+                    <span className="text-ink">{item.right_id}</span>
                   </Td>
                   <Td className="num text-right whitespace-nowrap">
                     {rupees(item.amount_rupees)}
@@ -120,7 +120,7 @@ export function MatchesView({ runId }: { runId: string }) {
                     {item.confidence.toFixed(2)}
                   </Td>
                   <Td className="max-w-lg text-xs leading-relaxed text-mute">
-                    <span className="num mr-1.5 text-accent/80">
+                    <span className="num mr-1.5 text-brand-ink/80">
                       {item.rule}
                     </span>
                     {item.reason}
@@ -132,28 +132,5 @@ export function MatchesView({ runId }: { runId: string }) {
         )}
       </div>
     </Panel>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded border px-2 py-1 text-[11px] whitespace-nowrap transition ${
-        active
-          ? "border-accent bg-accent/15 text-accent"
-          : "border-line bg-ink-700 text-mute hover:text-bright"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

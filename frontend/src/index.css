@@ -1,17 +1,55 @@
 @import "tailwindcss";
 
+/*
+  A single, deliberately light theme. Warm sand ground, near-white panels, soft
+  pastels carrying meaning. Every colour is painted explicitly so the page holds
+  its own appearance whatever the viewer's system is set to.
+
+  Semantic colour is kept separate from the brand accent: good, warn and bad
+  have to read at a glance on a finance screen, and they must never be confused
+  with "this is the primary action".
+*/
 @theme {
-  --color-ink-900: #0a0c10;
-  --color-ink-800: #101319;
-  --color-ink-700: #161a22;
-  --color-ink-600: #1e232d;
-  --color-line: #262c38;
-  --color-mute: #8992a3;
-  --color-bright: #e8ebf0;
-  --color-good: #34d399;
-  --color-warn: #fbbf24;
-  --color-bad: #fb7185;
-  --color-accent: #60a5fa;
+  /* Grounds, lightest to most recessed */
+  --color-sand: #efe9df;
+  --color-card: #fffdfa;
+  --color-card-2: #f7f2ea;
+  --color-card-3: #f1ebe1;
+
+  /* Hairlines */
+  --color-line: #e7dfd3;
+  --color-line-soft: #f0e9de;
+
+  /* Text */
+  --color-ink: #2b2620;
+  --color-ink-2: #6a6158;
+  --color-mute: #9a9086;
+
+  /* Brand: a soft indigo, used only for the primary action and selection */
+  --color-brand: #6a5ec4;
+  --color-brand-ink: #4c40a6;
+  --color-brand-bg: #ebe7f9;
+
+  /* Semantic */
+  --color-good: #3f8a63;
+  --color-good-bg: #e2f0e8;
+  --color-warn: #a8762a;
+  --color-warn-bg: #faeeda;
+  --color-bad: #b65265;
+  --color-bad-bg: #fae4e8;
+
+  /* Decorative pastels for tile marks */
+  --color-mint: #dff0e5;
+  --color-sky: #e2ecf8;
+  --color-blush: #fbe6ea;
+  --color-butter: #fbf1d9;
+  --color-lilac: #ece7f8;
+
+  --radius-card: 18px;
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
 }
 
 html,
@@ -21,29 +59,63 @@ body,
 }
 
 body {
-  background: var(--color-ink-900);
-  color: var(--color-bright);
-  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  background: var(--color-sand);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Figures are read in columns, so they get tabular digits everywhere. */
+/* Figures are read down columns, so digits line up everywhere. */
 .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  letter-spacing: -0.01em;
+}
+
+/* The small letterspaced caps used for nav and column labels. */
+.label {
+  font-size: 10.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.soft-shadow {
+  box-shadow:
+    0 1px 2px rgba(43, 38, 32, 0.04),
+    0 10px 26px rgba(43, 38, 32, 0.05);
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-ink-900);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-ink-600);
-  border-radius: 6px;
+  background: #dfd6c8;
+  border-radius: 999px;
+  border: 3px solid var(--color-sand);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2c3341;
+  background: #cfc4b3;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

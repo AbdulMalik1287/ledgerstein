@@ -12,12 +12,12 @@ import { count } from "../format";
 import { Empty, Panel, Tag, Td, Th } from "../ui";
 
 const ACTION_TONE: Record<string, string> = {
-  match: "text-good border-good/30 bg-good/10",
-  flag: "text-warn border-warn/30 bg-warn/10",
-  reject: "text-bad border-bad/30 bg-bad/10",
-  decline: "text-bad border-bad/30 bg-bad/10",
-  error: "text-bad border-bad/30 bg-bad/10",
-  resolve: "text-accent border-accent/30 bg-accent/10",
+  match: "bg-good-bg text-good",
+  flag: "bg-warn-bg text-warn",
+  reject: "bg-bad-bg text-bad",
+  decline: "bg-bad-bg text-bad",
+  error: "bg-bad-bg text-bad",
+  resolve: "bg-brand-bg text-brand-ink",
 };
 
 export function AuditView({ runId }: { runId: string }) {
@@ -56,21 +56,21 @@ export function AuditView({ runId }: { runId: string }) {
       title="Audit trail"
       subtitle={`${count(shown.length)} of ${count(items.length)} events, in the order they happened`}
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 pb-4">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search a payment id, an invoice, a rule…"
-          className="num min-w-64 flex-1 rounded border border-line bg-ink-900 px-3 py-1.5 text-xs text-bright outline-none placeholder:font-sans placeholder:text-mute/60 focus:border-accent"
+          className="num min-w-64 flex-1 rounded-full border border-line bg-card-2 px-4 py-2 text-[12.5px] text-ink outline-none placeholder:font-sans placeholder:text-mute focus:border-brand focus:bg-card"
         />
         {actions.map((option) => (
           <button
             key={option}
             onClick={() => setAction(action === option ? "" : option)}
-            className={`rounded border px-2 py-1 text-[11px] transition ${
+            className={`rounded-full border px-3 py-1.5 text-[12px] transition ${
               action === option
-                ? "border-accent bg-accent/15 text-accent"
-                : "border-line bg-ink-700 text-mute hover:text-bright"
+                ? "border-brand bg-brand-bg font-medium text-brand-ink"
+                : "border-line bg-card text-ink-2 hover:bg-card-2"
             }`}
           >
             {option}
@@ -96,7 +96,7 @@ export function AuditView({ runId }: { runId: string }) {
             </thead>
             <tbody>
               {shown.map((item) => (
-                <tr key={item.sequence} className="hover:bg-ink-700/50">
+                <tr key={item.sequence} className="hover:bg-card-2/60">
                   <Td className="num text-right text-mute/60">
                     {item.sequence}
                   </Td>
