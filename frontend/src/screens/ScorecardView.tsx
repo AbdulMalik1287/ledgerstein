@@ -136,6 +136,7 @@ export function ScorecardView({ card }: { card: Scorecard }) {
                 <tr>
                   <Th>Tier</Th>
                   <Th className="text-right">Matched</Th>
+                  <Th className="text-right">Share</Th>
                   <Th className="text-right">Precision</Th>
                   <Th className="text-right">Wrong ₹</Th>
                 </tr>
@@ -147,6 +148,12 @@ export function ScorecardView({ card }: { card: Scorecard }) {
                       <Tag tone={tierTone(tier)}>{tier}</Tag>
                     </Td>
                     <Td className="num text-right">{count(stats.predicted)}</Td>
+                    <Td className="num text-right text-ink-2">
+                      {percent(
+                        overall.predicted ? stats.predicted / overall.predicted : 0,
+                        0,
+                      )}
+                    </Td>
                     <Td
                       className={`num text-right ${stats.precision === 1 ? "text-good" : "text-warn"}`}
                     >
